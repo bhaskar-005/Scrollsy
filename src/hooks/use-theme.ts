@@ -3,12 +3,29 @@
  * https://docs.expo.dev/guides/color-schemes/
  */
 
-import { Colors } from '@/constants/theme';
+import { createContext, useContext } from 'react';
+
+import { Colors, type Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
+/**
+ * Lets a screen pin a palette for everything inside it. Home sets this to the
+ * dark palette because it sits on a night sky photo, and dark copy would be
+ * unreadable there whatever the device scheme says.
+ */
+export const PaletteContext = createContext<Palette | null>(null);
 
-  return Colors[theme];
+export function useTheme(pin?: keyof typeof Colors): Palette {
+  const inherited = useContext(PaletteContext);
+  const scheme = useColorScheme();
+
+  if (pin) {
+    return Colors[pin];
+  }
+
+  if (inherited) {
+    return inherited;
+  }
+
+  return scheme === 'dark' ? Colors.dark : Colors.light;
 }

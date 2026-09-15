@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 600" width="100" height="600">
+  <linearGradient id="strike" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#7C3AED"/>
+    <stop offset="0.35" stop-color="#C4B5FD"/>
+    <stop offset="0.65" stop-color="#A78BFA"/>
+    <stop offset="1" stop-color="#5B21B6"/>
+  </linearGradient>
+  <path fill="url(#strike)" d="M72 0 L26 322 L58 306 L26 600 L86 278 L50 296 Z"/>
+</svg>

@@ -1,0 +1,234 @@
+{
+  "app": {
+    "name": "Scrollsy"
+  },
+  "common": {
+    "skip": "Skip",
+    "close": "Close",
+    "chevron": "›",
+    "closeGlyph": "✕",
+    "pro": "PRO",
+    "member": "Scrollsy member",
+    "on": "On",
+    "off": "Off",
+    "connected": "Connected",
+    "docs": "Docs"
+  },
+  "stage": {
+    "line": "Stage {{number}}, {{label}}",
+    "fresh": "Fresh",
+    "buzzed": "Buzzed",
+    "dizzy": "Dizzy",
+    "fried": "Fried",
+    "cooked": "Cooked",
+    "gone": "Gone"
+  },
+  "tabs": {
+    "home": "Home",
+    "stats": "Stats",
+    "battle": "Battle"
+  },
+  "onboarding": {
+    "welcome": {
+      "headline": "See how many reels you scrolled today.",
+      "start": "Log in with Google",
+      "googleIcon": "Google",
+      "consentLead": "By continuing you agree to our",
+      "consentJoin": "and",
+      "terms": "Terms",
+      "privacy": "Privacy Policy"
+    },
+    "concept": {
+      "headline": "Every reel you scroll melts Scrollsy a little more.",
+      "reels": "reels seen",
+      "caption": "He drops a stage every hundred reels.",
+      "replay": "Tap him to watch it again",
+      "next": "Got it"
+    },
+    "permission": {
+      "headline": "Turn these on and we start counting.",
+      "screenTimeTitle": "Screen time",
+      "screenTimeBody": "So we can see your time in reels apps",
+      "overlayTitle": "Display over other apps",
+      "overlayBody": "So the counter can float while you scroll",
+      "allow": "Allow",
+      "granted": "On",
+      "why": "Why do you need these?",
+      "next": "Continue",
+      "whyHeadline": "These two are what make the count real",
+      "whyScreenTime": "Screen time tells us how long you sat in the reels apps.",
+      "whyOverlay": "Display over other apps lets the count float while you scroll.",
+      "whyPrivate": "We never read what you actually watched.",
+      "whyRevoke": "You can turn either one off later in settings.",
+      "whyConcerns": "Still not sure",
+      "whyPolicy": "Read our policy"
+    },
+    "friends": {
+      "headline": "Make them beat this.",
+      "add": "Challenge a friend",
+      "decline": "Scroll alone",
+      "eyebrow": "Flex your count",
+      "you": "You",
+      "friend": "Friend"
+    },
+    "notifications": {
+      "headline": "Let him yell at you.",
+      "caption": "He pings you when the count gets ugly. Nothing else.",
+      "alerts": {
+        "buzzed": {
+          "time": "2h",
+          "body": "100 reels, i'm getting dizzy."
+        },
+        "fried": {
+          "time": "1h",
+          "body": "300 reels. go touch some grass."
+        },
+        "cooked": {
+          "time": "now",
+          "body": "bro stop now im cooked."
+        }
+      },
+      "enable": "Turn on notifications",
+      "decline": "Not now"
+    }
+  },
+  "paywall": {
+    "eyebrow": "Scrollsy Pro",
+    "headline": "Buy back your brain.",
+    "start": "Start {{days}} days free",
+    "continueFree": "Continue free",
+    "terms": "{{days}} days free, then {{price}} a year. Cancel anytime in Play Store.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "saving": "save 60%",
+    "perks": {
+      "lock": "Lock apps at your limit",
+      "buyBack": "Buy back 50 reels after lockout",
+      "history": "Full history, not just 7 days",
+      "friends": "More than 5 friends"
+    }
+  },
+  "home": {
+    "streak": "🔥 {{days}} day streak",
+    "reelsToday": "reels seen today",
+    "toNextStage": "{{reels}} to next stage",
+    "limit": "limit {{reels}}",
+    "yesterday": "Yesterday",
+    "weekAverage": "7 day average",
+    "appsToday": "Where today went"
+  },
+  "battle": {
+    "title": "Scroll battle",
+    "you": "You",
+    "proRow": "More than {{cap}} friends",
+    "profile": {
+      "rank": "Rank",
+      "reels": "Reels today",
+      "upsellTitle": "Get the gold tick.",
+      "upsellBody": "Members get the tick, apps that lock at your limit, every day of history and room for more than five friends.",
+      "upsellCta": "Get the tick for {{price}}",
+      "done": "Done"
+    },
+    "openSpot": {
+      "rival": "Invite your rival 🥊",
+      "roommate": "Invite your roommate 🛋",
+      "crush": "Invite your crush 👀",
+      "worst": "Invite a bad influence 😈",
+      "anyone": "Invite the group chat 💬"
+    }
+  },
+  "profile": {
+    "averageADay": "Average a day",
+    "bestDay": "Best day",
+    "worstStage": "Worst stage",
+    "lastSevenDays": "Last 7 days",
+    "limit": "limit {{reels}}"
+  },
+  "stats": {
+    "title": "Your stats",
+    "thisWeek": "This week",
+    "totalReels": "Total reels this week",
+    "appsThisWeek": "Where the week went"
+  },
+  "settings": {
+    "title": "Settings",
+    "signedIn": "Signed in with Google",
+    "pro": {
+      "lockCta": "Lock reels at {{price}}",
+      "activeLabel": "Scrollsy member",
+      "activeTerms": "Apps lock at your limit",
+      "manage": "Manage plan"
+    },
+    "groups": {
+      "counter": "Your counter",
+      "friends": "Friends",
+      "app": "App",
+      "support": "Support"
+    },
+    "rows": {
+      "counterStyle": "Counter style",
+      "widget": "Home screen widget",
+      "friends": "Friends and battles",
+      "dailyLimit": "Daily limit",
+      "notifications": "Notifications",
+      "screenTime": "Screen time",
+      "darkMode": "Dark mode",
+      "language": "Language",
+      "feedback": "Send feedback",
+      "rate": "Rate on Play Store",
+      "replayOnboarding": "Replay onboarding"
+    },
+    "logOut": "Log out",
+    "version": "Version {{version}}",
+    "counterSheet": {
+      "title": "Your counter",
+      "caption": "This is what floats over whatever you are scrolling.",
+      "styleLabel": "Style",
+      "positionLabel": "Where it sits",
+      "positionHint": "Drag it wherever you want",
+      "styles": {
+        "pill": "Pill",
+        "outline": "Outline",
+        "glass": "Glass",
+        "plain": "Plain",
+        "mascot": "Mascot"
+      },
+      "positions": {
+        "topLeft": "Top left",
+        "top": "Top",
+        "topRight": "Top right",
+        "left": "Left",
+        "center": "Center",
+        "right": "Right",
+        "bottomLeft": "Bottom left",
+        "bottom": "Bottom",
+        "bottomRight": "Bottom right"
+      },
+      "save": "Save counter"
+    },
+    "widgetSheet": {
+      "title": "Home screen widget",
+      "caption": "Put the count on your home screen. You see it before you open anything.",
+      "previewLabel": "reels today",
+      "add": "Add widget"
+    },
+    "languageSheet": {
+      "title": "Language",
+      "caption": "More are on the way.",
+      "done": "Done"
+    },
+    "feedbackSheet": {
+      "title": "Send feedback",
+      "topicLabel": "What is this about",
+      "topics": {
+        "bug": "Report a problem",
+        "idea": "Share an idea",
+        "billing": "Billing",
+        "other": "Something else"
+      },
+      "messageLabel": "Tell us more",
+      "placeholder": "What happened",
+      "send": "Send feedback"
+    }
+  }
+}
