@@ -5,6 +5,7 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    // The API and the website are their own projects, each with its own checks.
+    ignores: ["dist/*", "api/*", "api-prisma/*", "web/*"],
   }
 ]);

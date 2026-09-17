@@ -3,8 +3,9 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar, Badge } from '@/components/ui';
-import { Pricing, type BoardEntry } from '@/constants/placeholder';
+import type { BoardEntry } from '@/lib/board';
 import { Fonts, MinTouch, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useEntryPrice } from '@/hooks/use-offers';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n';
 
@@ -33,15 +34,15 @@ export function RankRow({
       style={({ pressed }) => [
         styles.row,
         !last && styles.divided,
-        entry.you && styles.rowYou,
+        entry.isMe && styles.rowYou,
         pressed && styles.pressed,
       ]}>
       <Text style={styles.rank}>{rank}</Text>
 
-      <Avatar name={entry.name} photo={entry.photo} size={AvatarSize} premium={entry.premium} />
+      <Avatar name={entry.name} photo={entry.avatarUrl ?? undefined} size={AvatarSize} premium={entry.premium} />
 
-      <Text style={[styles.name, entry.you && styles.you]} numberOfLines={1}>
-        {entry.you ? t('battle.you') : entry.name}
+      <Text style={[styles.name, entry.isMe && styles.you]} numberOfLines={1}>
+        {entry.isMe ? t('battle.you') : entry.name}
       </Text>
 
       <Text style={styles.reels}>{entry.reels}</Text>
@@ -70,6 +71,7 @@ export function EmptyRow({
 }) {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const price = useEntryPrice();
 
   return (
     <Pressable
@@ -93,7 +95,7 @@ export function EmptyRow({
       {locked ? (
         <>
           <Badge label={t('common.pro')} style={styles.badge} />
-          <Text style={styles.reels}>{Pricing.entry}</Text>
+          <Text style={styles.reels}>{price}</Text>
         </>
       ) : (
         <Feather name="chevron-right" size={19} color={theme.textFaint} />

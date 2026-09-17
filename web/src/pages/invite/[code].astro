@@ -1,0 +1,85 @@
+---
+/**
+ * Where an invite link lands. Built per request, because it shows who sent it,
+ * and so a link preview in a chat shows that too.
+ *
+ * On Android the one button opens the app straight onto the invite when it is
+ * installed, and goes to Play, carrying the code, when it is not. Anywhere else
+ * it goes to Play.
+ */
+export const prerender = false;
+
+import { env } from 'cloudflare:workers';
+
+import Page from '../../layouts/Page.astro';
+import { lookUpInvite } from '../../lib/invite';
+import { androidIntentUrl, inviterFirstName, isAndroid, playStoreUrl } from '../../lib/links';
+
+const code = Astro.params.code ?? '';
+const lookup = await lookUpInvite(code);
+
+const onAndroid = isAndroid(Astro.request.headers.get('User-Agent'));
+const store = playStoreUrl(env.ANDROID_PACKAGE, lookup.status === 'found' ? code : undefined);
+const accept = lookup.status === 'found' && onAndroid ? androidIntentUrl(env.ANDROID_PACKAGE, code, store) : store;
+
+/** Scrollsy is Android only, so nothing is promised to anyone who cannot install it. */
+const acceptLabel = onAndroid ? 'Accept the battle' : 'Get Scrollsy';
+const acceptNote = onAndroid ? 'Opens Scrollsy, or gets it for you first.' : 'Scrollsy is on Android for now.';
+
+const name = lookup.status === 'found' ? (inviterFirstName(lookup.inviter.name) ?? 'A friend') : null;
+
+/** Short, so a fresh or rotated invite shows up within a minute. Never cache a failure. */
+Astro.response.headers.set(
+  'Cache-Control',
+  lookup.status === 'unavailable' ? 'no-store' : 'public, max-age=60',
+);
+/** Real statuses, so monitoring sees an outage and crawlers do not treat a dead invite as a page. */
+if (lookup.status === 'missing') {
+  Astro.response.status = 404;
+} else if (lookup.status === 'unavailable') {
+  Astro.response.status = 503;
+}
+---
+
+{
+  lookup.status === 'found' && (
+    <Page
+      title={`${name} wants to battle you on Scrollsy`}
+      previewTitle={`${name} wants to battle you on Scrollsy`}
+      description="Fewest reels scrolled today wins."
+      indexable={false}
+    >
+      <p class="eyebrow">Scroll battle</p>
+      <h1 class="headline">{name} wants to battle you.</h1>
+      <p class="caption">Fewest reels scrolled today wins.</p>
+      <a class="primary" href={accept}>
+        <span>{acceptLabel}</span>
+      </a>
+      <p class="fine">{acceptNote}</p>
+    </Page>
+  )
+}
+
+{
+  lookup.status === 'missing' && (
+    <Page title="This invite has run out" description="Start your own scroll battle on Scrollsy." indexable={false}>
+      <h1 class="headline">This invite has run out.</h1>
+      <p class="caption">Ask for a fresh link, or start your own battle.</p>
+      <a class="primary" href={store}>
+        <span>Get Scrollsy</span>
+      </a>
+    </Page>
+  )
+}
+
+{
+  lookup.status === 'unavailable' && (
+    <Page title="Scrollsy" description="Start your own scroll battle on Scrollsy." indexable={false}>
+      <h1 class="headline">That did not load.</h1>
+      <p class="caption">Your invite is fine. Try the link again in a moment.</p>
+      <a class="primary" href={Astro.url.pathname}>
+        <span>Try again</span>
+      </a>
+    </Page>
+  )
+}

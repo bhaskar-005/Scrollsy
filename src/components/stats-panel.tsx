@@ -3,44 +3,44 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Card, StatTile } from '@/components/ui';
-import { Profile, Week } from '@/constants/placeholder';
 import { stageLabel } from '@/constants/stages';
 import { Fonts, Gradients, Spacing, type Palette } from '@/constants/theme';
+import type { UsageWeek } from '@/hooks/use-usage-week';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n';
-
-const peak = Math.max(...Week.map((day) => day.reels));
 
 /** Gradients run bottom to top, same as everywhere else the accent fill shows up. */
 const barStart = { x: 0, y: 1 };
 const barEnd = { x: 0, y: 0 };
 
 /**
- * The three tiles and the week chart, lifted out of the old Profile tab when
- * Settings replaced it. Nothing renders this yet. It is parked here until we
- * decide which screen it belongs on.
+ * The three tiles and the week chart. Every number comes from the device's own
+ * store, so it is the same count the home screen is showing.
  */
-export function StatsPanel() {
+export function StatsPanel({ week, dailyLimit }: { week: UsageWeek; dailyLimit: number }) {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  /** A week of zeroes would divide by zero, and every bar is flat anyway. */
+  const peak = Math.max(...week.days.map((day) => day.reels), 1);
 
   return (
     <View style={styles.panel}>
       <View style={styles.tiles}>
-        <StatTile value={Profile.avgPerDay} label={t('profile.averageADay')} compact />
-        <StatTile value={Profile.bestDay} label={t('profile.bestDay')} compact />
-        <StatTile value={stageLabel(Profile.worstStage)} label={t('profile.worstStage')} compact />
+        <StatTile value={week.average} label={t('profile.averageADay')} compact />
+        <StatTile value={week.best} label={t('profile.bestDay')} compact />
+        <StatTile value={stageLabel(week.worstStage)} label={t('profile.worstStage')} compact />
       </View>
 
       <Card style={styles.chartCard}>
         <View style={styles.chartHead}>
           <Text style={styles.chartTitle}>{t('profile.lastSevenDays')}</Text>
-          <Text style={styles.chartLimit}>{t('profile.limit', { reels: Profile.dailyLimit })}</Text>
+          <Text style={styles.chartLimit}>{t('profile.limit', { reels: dailyLimit })}</Text>
         </View>
 
         <View style={styles.chart}>
-          {Week.map((day, index) => (
-            <View key={`${day.day}-${index}`} style={styles.column}>
+          {week.days.map((day) => (
+            <View key={day.date} style={styles.column}>
               <Text style={styles.columnValue}>{day.reels}</Text>
               <View style={styles.barTrack}>
                 <LinearGradient
@@ -50,7 +50,7 @@ export function StatsPanel() {
                   style={[styles.bar, { height: `${(day.reels / peak) * 100}%` }]}
                 />
               </View>
-              <Text style={styles.columnDay}>{day.day}</Text>
+              <Text style={styles.columnDay}>{day.label}</Text>
             </View>
           ))}
         </View>

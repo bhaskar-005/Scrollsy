@@ -10,12 +10,12 @@ import { AppBreakdownCard } from '@/components/app-breakdown';
 import { Backdrop } from '@/components/backdrop';
 import { ProUpsell } from '@/components/settings/pro-upsell';
 import { StatsPanel } from '@/components/stats-panel';
-import { Account, Week, WeekAppUsage, WeekRange } from '@/constants/placeholder';
 import { BottomTabInset, Fonts, MinTouch, Spacing, type Palette } from '@/constants/theme';
+import { usePremium } from '@/hooks/use-premium';
+import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
+import { useUsageWeek } from '@/hooks/use-usage-week';
 import { t } from '@/i18n';
-
-const weekTotal = Week.reduce((sum, day) => sum + day.reels, 0);
 
 /** How much of the scroll dissolves into the header on the way up. Matches Settings. */
 const FadeHeight = 30;
@@ -33,6 +33,9 @@ const Mask = {
 export default function StatsScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const week = useUsageWeek();
+  const { profile } = useProfile();
+  const premium = usePremium();
 
   return (
     <Backdrop>
@@ -46,7 +49,12 @@ export default function StatsScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('settings.title')}
           style={({ pressed }) => [styles.slot, pressed && styles.pressed]}>
-          <Avatar name={Account.name} size={34} />
+          <Avatar
+            name={profile.name}
+            photo={profile.avatarUrl ?? undefined}
+            premium={premium}
+            size={34}
+          />
         </Pressable>
       </View>
 
@@ -67,7 +75,7 @@ export default function StatsScreen() {
 
             <View style={styles.weekLabelBlock}>
               <Text style={styles.weekLabel}>{t('stats.thisWeek')}</Text>
-              <Text style={styles.weekRange}>{WeekRange}</Text>
+              <Text style={styles.weekRange}>{week.range}</Text>
             </View>
 
             <View style={[styles.weekArrow, styles.weekArrowDisabled]}>
@@ -78,11 +86,11 @@ export default function StatsScreen() {
           {/** Free plan only sees this week. Full history is what the plan is for. */}
           <ProUpsell />
 
-          <StatsPanel />
+          <StatsPanel week={week} dailyLimit={profile.dailyLimit} />
 
-          <StatTile value={weekTotal} label={t('stats.totalReels')} />
+          <StatTile value={week.total} label={t('stats.totalReels')} />
 
-          <AppBreakdownCard title={t('stats.appsThisWeek')} apps={WeekAppUsage} />
+          <AppBreakdownCard title={t('stats.appsThisWeek')} apps={week.apps} />
         </ScrollView>
       </MaskedView>
     </Backdrop>

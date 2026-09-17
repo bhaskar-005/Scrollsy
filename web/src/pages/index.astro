@@ -1,0 +1,18 @@
+---
+/**
+ * The landing page. Static, served as a plain file. A starting point to build
+ * the full landing page on.
+ */
+import { env } from 'cloudflare:workers';
+
+import Page from '../layouts/Page.astro';
+import { playStoreUrl } from '../lib/links';
+
+const store = playStoreUrl(env.ANDROID_PACKAGE);
+---
+
+<Page title="Scrollsy" description="See how many reels you scrolled today.">
+  <h1 class="headline">See how many reels you scrolled today.</h1>
+  <p class="caption">Every reel you scroll melts Scrollsy a little more.</p>
+  <a class="primary" href={store}><span>Get Scrollsy</span></a>
+</Page>

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    // Imports keep their .ts extension, so the same files run under Wrangler
+    // and under Node's test runner with no build step in between.
+    "allowImportingTsExtensions": true,
+    // Node strips types rather than compiling them, so only syntax it can erase.
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src"]
+}

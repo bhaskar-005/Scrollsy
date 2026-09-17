@@ -1,0 +1,12 @@
+# Copy to .dev.vars for `npm run dev`. In production use
+# `npx wrangler secret put NAME` instead.
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+SUPABASE_SECRET_KEY=sb_secret_your_key
+
+# Supabase's pooler, port 6543, not the direct 5432 connection. Used only when
+# there is no Hyperdrive binding.
+DATABASE_URL=postgresql://postgres.your-ref:password@aws-0-region.pooler.supabase.com:6543/postgres
+
+REVENUECAT_WEBHOOK_AUTH=a-long-random-value-also-entered-in-revenuecat
+REVENUECAT_API_KEY=sk_your_revenuecat_v1_secret_key

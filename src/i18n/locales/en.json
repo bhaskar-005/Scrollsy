@@ -12,10 +12,11 @@
     "on": "On",
     "off": "Off",
     "connected": "Connected",
-    "docs": "Docs"
+    "docs": "Docs",
+    "you": "You",
+    "retry": "Try again"
   },
   "stage": {
-    "line": "Stage {{number}}, {{label}}",
     "fresh": "Fresh",
     "buzzed": "Buzzed",
     "dizzy": "Dizzy",
@@ -36,7 +37,9 @@
       "consentLead": "By continuing you agree to our",
       "consentJoin": "and",
       "terms": "Terms",
-      "privacy": "Privacy Policy"
+      "privacy": "Privacy Policy",
+      "failed": "That did not work. Try again.",
+      "continueWithout": "Carry on without an account"
     },
     "concept": {
       "headline": "Every reel you scroll melts Scrollsy a little more.",
@@ -95,27 +98,34 @@
   "paywall": {
     "eyebrow": "Scrollsy Pro",
     "headline": "Buy back your brain.",
-    "start": "Start {{days}} days free",
+    "start": "Start for {{price}}",
     "continueFree": "Continue free",
-    "terms": "{{days}} days free, then {{price}} a year. Cancel anytime in Play Store.",
+    "terms": {
+      "monthly": "{{entry}} for {{days}} days, then {{price}} a month. Cancel anytime in Play Store.",
+      "yearly": "{{entry}} for {{days}} days, then {{price}} a year. Cancel anytime in Play Store."
+    },
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "saving": "save 60%",
+    "saving": "save {{percent}}%",
     "perks": {
       "lock": "Lock apps at your limit",
       "buyBack": "Buy back 50 reels after lockout",
       "history": "Full history, not just 7 days",
       "friends": "More than 5 friends"
-    }
+    },
+    "termsPlain": {
+      "monthly": "{{price}} a month. Cancel anytime in Play Store.",
+      "yearly": "{{price}} a year. Cancel anytime in Play Store."
+    },
+    "purchasing": "Talking to Play Store",
+    "failed": "That did not go through. Nothing was charged.",
+    "unavailable": "Plans are not on sale yet. Nothing was charged.",
+    "restore": "Restore purchases",
+    "restored": "Your plan is back.",
+    "nothingToRestore": "Nothing to restore on this account."
   },
   "home": {
-    "streak": "🔥 {{days}} day streak",
-    "reelsToday": "reels seen today",
-    "toNextStage": "{{reels}} to next stage",
-    "limit": "limit {{reels}}",
-    "yesterday": "Yesterday",
-    "weekAverage": "7 day average",
-    "appsToday": "Where today went"
+    "reelsToday": "reels seen today"
   },
   "battle": {
     "title": "Scroll battle",
@@ -135,6 +145,20 @@
       "crush": "Invite your crush 👀",
       "worst": "Invite a bad influence 😈",
       "anyone": "Invite the group chat 💬"
+    },
+    "empty": {
+      "title": "Nobody to beat yet",
+      "body": "Add a friend and the board fills up."
+    },
+    "invite": {
+      "cta": "Invite a friend",
+      "message": "I scrolled {{reels}} reels today. Beat that. {{link}}",
+      "failed": "Could not make an invite link. Try again in a moment."
+    },
+    "signedOut": {
+      "title": "Log in to battle",
+      "body": "Your friends and your rank live with your account.",
+      "cta": "Log in with Google"
     }
   },
   "profile": {
@@ -148,7 +172,8 @@
     "title": "Your stats",
     "thisWeek": "This week",
     "totalReels": "Total reels this week",
-    "appsThisWeek": "Where the week went"
+    "appsThisWeek": "Where the week went",
+    "nothingCounted": "Nothing counted yet"
   },
   "settings": {
     "title": "Settings",
@@ -176,7 +201,8 @@
       "language": "Language",
       "feedback": "Send feedback",
       "rate": "Rate on Play Store",
-      "replayOnboarding": "Replay onboarding"
+      "replayOnboarding": "Replay onboarding",
+      "restore": "Restore purchases"
     },
     "logOut": "Log out",
     "version": "Version {{version}}",
@@ -184,25 +210,12 @@
       "title": "Your counter",
       "caption": "This is what floats over whatever you are scrolling.",
       "styleLabel": "Style",
-      "positionLabel": "Where it sits",
-      "positionHint": "Drag it wherever you want",
       "styles": {
         "pill": "Pill",
         "outline": "Outline",
         "glass": "Glass",
         "plain": "Plain",
         "mascot": "Mascot"
-      },
-      "positions": {
-        "topLeft": "Top left",
-        "top": "Top",
-        "topRight": "Top right",
-        "left": "Left",
-        "center": "Center",
-        "right": "Right",
-        "bottomLeft": "Bottom left",
-        "bottom": "Bottom",
-        "bottomRight": "Bottom right"
       },
       "save": "Save counter"
     },
@@ -228,7 +241,25 @@
       },
       "messageLabel": "Tell us more",
       "placeholder": "What happened",
-      "send": "Send feedback"
+      "send": "Send feedback",
+      "sending": "Sending",
+      "failed": "That did not send. Check your connection and try again."
+    },
+    "noName": "Your account",
+    "signedOut": "You are signed out",
+    "signInPrompt": "Log in to keep your count",
+    "deleteAccount": {
+      "row": "Delete my account",
+      "title": "Delete your account",
+      "body": "This removes your account, your counts and your friends. It cannot be undone. A paid plan is cancelled in the Play Store, not here.",
+      "cancel": "Keep it",
+      "confirm": "Delete"
+    },
+    "limitSheet": {
+      "title": "Daily limit",
+      "caption": "Apps lock once you pass this. You can buy back 50 reels after that.",
+      "reels": "{{reels}} reels",
+      "save": "Save limit"
     }
   }
 }

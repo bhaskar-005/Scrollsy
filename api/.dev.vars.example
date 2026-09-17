@@ -1,0 +1,11 @@
+# Copy to .dev.vars, which git ignores, for `npm run dev`. In production set
+# each with `npx wrangler secret put NAME` instead.
+#
+# The Supabase address and keys live only here, on the server. The app never
+# holds them.
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+SUPABASE_SECRET_KEY=sb_secret_your_key
+
+REVENUECAT_WEBHOOK_AUTH=a-long-random-value-also-entered-in-revenuecat
+REVENUECAT_API_KEY=sk_your_revenuecat_v1_secret_key

@@ -61,6 +61,19 @@ export const Colors = {
     glow: 'rgba(124, 58, 237, 0.16)',
     glowFade: 'rgba(124, 58, 237, 0)',
 
+    /**
+     * The space he floats in across the top of Home. Deepest at the very top,
+     * easing down to where the page curves up into it. It stops a clear step
+     * short of the page itself, so that curve still reads as an edge.
+     */
+    skyTop: '#BCA7F2',
+    skyMid: '#D6CAF9',
+    skyBottom: '#E9E1FC',
+    /** The faint arc nested in that sky. */
+    skyRing: 'rgba(76, 29, 149, 0.16)',
+    /** Specks drifting up through it. */
+    star: 'rgba(255, 255, 255, 0.92)',
+
     /** Contact shadow, right under a raised element. */
     shadowNear: 'rgba(24, 16, 48, 0.16)',
     /** The wide soft one that gives it height off the page. */
@@ -108,6 +121,15 @@ export const Colors = {
     glow: 'rgba(139, 92, 246, 0.34)',
     glowFade: 'rgba(139, 92, 246, 0)',
 
+    /** Deep space at the top edge, warming to violet where the page curves into it. */
+    skyTop: '#0B0715',
+    skyMid: '#1B0F35',
+    skyBottom: '#4C1D95',
+    /** The faint arc nested in that sky. */
+    skyRing: 'rgba(255, 255, 255, 0.10)',
+    /** Specks drifting up through it. */
+    star: 'rgba(255, 255, 255, 0.85)',
+
     shadowNear: 'rgba(6, 4, 16, 0.34)',
     shadowFar: 'rgba(6, 4, 16, 0.40)',
 
@@ -137,8 +159,6 @@ export const Gradients = {
   onGradient: '#FFFFFF',
   /** A highlight swept across a gradient face, left to right. */
   shine: ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.32)', 'rgba(255, 255, 255, 0)'] as const,
-  /** Laid over the Home background photo. */
-  scrim: ['rgba(6, 5, 14, 0.30)', 'rgba(6, 5, 14, 0.62)', 'rgba(6, 5, 14, 0.94)'] as const,
 } as const;
 
 /**

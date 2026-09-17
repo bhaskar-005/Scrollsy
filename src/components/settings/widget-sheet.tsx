@@ -3,9 +3,10 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton, Sheet } from '@/components/ui';
 import { Mascot } from '@/components/mascot';
-import { Today } from '@/constants/placeholder';
+import { stageFor } from '@/constants/stages';
 import { Fonts, Radius, Spacing, type Palette } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useTodayReels } from '@/hooks/use-today-reels';
 import { t } from '@/i18n';
 
 /** Art, not layout. The home screen is a drawing, so it carries its own numbers. */
@@ -17,6 +18,7 @@ const AppSlots = 8;
 export function WidgetSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const reels = useTodayReels();
 
   return (
     <Sheet visible={visible} onClose={onClose} title={t('settings.widgetSheet.title')}>
@@ -28,9 +30,9 @@ export function WidgetSheet({ visible, onClose }: { visible: boolean; onClose: (
 
           {/** The widget itself, sitting where it would sit on a real home screen. */}
           <View style={styles.widget}>
-            <Mascot stage={Today.stage} width={46} />
+            <Mascot stage={stageFor(reels)} width={46} />
             <View style={styles.widgetText}>
-              <Text style={styles.widgetCount}>{Today.reels}</Text>
+              <Text style={styles.widgetCount}>{reels}</Text>
               <Text style={styles.widgetLabel}>{t('settings.widgetSheet.previewLabel')}</Text>
             </View>
           </View>

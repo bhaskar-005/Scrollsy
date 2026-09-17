@@ -1,0 +1,20 @@
+{
+  "name": "doomless-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit && tsc --noEmit -p test && wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "test": "node --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "hono": "^4.13.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.4",
+    "typescript": "~6.0.3",
+    "wrangler": "^4.132.0"
+  }
+}

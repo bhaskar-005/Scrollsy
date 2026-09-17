@@ -1,0 +1,14 @@
+{
+  // These run on Node, so they get Node's types. The app does not: it runs on a
+  // phone, and a Node only API must never slip into it.
+  //
+  // Only the parts of the app with no native imports can be tested this way.
+  // Everything else needs a device, see docs/checklist.md.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": ["./**/*.ts", "../src/lib"]
+}

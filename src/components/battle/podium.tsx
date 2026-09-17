@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/ui';
-import type { BoardEntry } from '@/constants/placeholder';
+import type { BoardEntry } from '@/lib/board';
 import { Fonts, Podium as Blocks, Spacing, type Palette } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n';
@@ -66,14 +66,14 @@ export function Podium({
         style={({ pressed }) => [styles.column, pressed && styles.pressed]}>
         <Avatar
           name={entry.name}
-          photo={entry.photo}
+          photo={entry.avatarUrl ?? undefined}
           size={AvatarSize[place]}
           premium={entry.premium}
           style={styles.avatar}
         />
 
-        <Text style={[styles.name, entry.you && styles.you]} numberOfLines={1}>
-          {entry.you ? t('battle.you') : entry.name.split(' ')[0]}
+        <Text style={[styles.name, entry.isMe && styles.you]} numberOfLines={1}>
+          {entry.isMe ? t('battle.you') : entry.name.split(' ')[0]}
         </Text>
         <Text style={styles.reels}>{entry.reels}</Text>
 

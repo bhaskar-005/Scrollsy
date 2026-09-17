@@ -1,136 +1,190 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-
-import { Badge, Card, StatTile } from '@/components/ui';
-import { AppBreakdownCard } from '@/components/app-breakdown';
-import { Backdrop } from '@/components/backdrop';
-import { MascotStage } from '@/components/mascot-stage';
-import { ProUpsell } from '@/components/settings/pro-upsell';
-import { Account, AppUsage, Today } from '@/constants/placeholder';
-import { stageLabel } from '@/constants/stages';
 import { useMemo } from 'react';
-import { BottomTabInset, Fonts, Radius, Spacing, type Palette } from '@/constants/theme';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Avatar } from '@/components/ui';
+import { Backdrop } from '@/components/backdrop';
+import { MascotStage } from '@/components/mascot';
+import { ProUpsell } from '@/components/settings/pro-upsell';
+import { StarField } from '@/components/star-field';
+import { stageFor } from '@/constants/stages';
+import { BottomTabInset, Fonts, MinTouch, Spacing, type Palette } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { usePremium } from '@/hooks/use-premium';
+import { useProfile } from '@/hooks/use-profile';
+import { useTodayReels } from '@/hooks/use-today-reels';
 import { t } from '@/i18n';
 
+/**
+ * The page rises into the sky as one very wide circle, so the seam between the
+ * two reads as a curve running across the screen rather than a pair of rounded
+ * corners. Wider than the screen, so only the gentle top of it is ever in view.
+ */
+const DomeSpan = 2.4;
+
+/** How far his feet cross over onto the page he is standing on. */
+const DomeOverlap = Spacing.four;
+
+/** A second arc nested inside the first, so the sky rings him. */
+const RingGap = Spacing.six;
+
+const RingWeight = 1.5;
+
 export default function HomeScreen() {
-  // Home stands on a night sky photo, so it reads as dark in either scheme.
-  const theme = useTheme('dark');
+  const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
-  const { width } = useWindowDimensions();
-  const progress = Math.min(Today.reels / Today.limit, 1);
-  const initial = Account.name.trim().charAt(0).toUpperCase();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const reels = useTodayReels();
+  const { profile } = useProfile();
+  const premium = usePremium();
+
+  const domeRadius = (width * DomeSpan) / 2;
+  const domeHeight = Math.max(height, domeRadius + Spacing.six);
+  /** How far the curve has fallen away by the time it reaches the screen edge. */
+  const arcDrop = domeRadius - Math.sqrt(Math.max(domeRadius ** 2 - (width / 2) ** 2, 0));
+  /** Same centre as the dome, one gap further out. */
+  const ringRadius = domeRadius + RingGap;
 
   return (
-    <Backdrop background={Today.stage}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.date}>{Today.date}</Text>
-          <Badge label={t('home.streak', { days: Today.streakDays })} tone="outline" />
-
-          {/** Settings is off here rather than in the tab bar, so the bar stays two wide. */}
-          <Pressable
-            onPress={() => router.push('/settings')}
-            accessibilityRole="button"
-            accessibilityLabel={t('settings.title')}
-            style={({ pressed }) => [styles.avatar, pressed && styles.avatarPressed]}>
-            <Text style={styles.initial}>{initial}</Text>
-          </Pressable>
-        </View>
-
+    <Backdrop glow={false}>
+      <View style={styles.page}>
         <View style={styles.hero}>
-          <Text style={styles.stage}>
-            {t('stage.line', { number: Today.stageNumber, label: stageLabel(Today.stage) })}
-          </Text>
-          <MascotStage stage={Today.stage} width={Math.min(width * 0.62, 280)} />
+          {/**
+           * Deepest at the top edge, easing down to meet the page. Runs up
+           * behind the status bar, and past the lowest point of the curve.
+           */}
+          <LinearGradient
+            colors={[theme.skyTop, theme.skyMid, theme.skyBottom]}
+            style={[styles.sky, { top: -insets.top, bottom: -(arcDrop + Spacing.two) }]}>
+            <StarField />
+          </LinearGradient>
+
+          <View
+            style={[
+              styles.ring,
+              {
+                width: ringRadius * 2,
+                height: ringRadius * 2,
+                borderRadius: ringRadius,
+                marginLeft: -ringRadius,
+                bottom: -(domeRadius * 2 + RingGap - DomeOverlap),
+              },
+            ]}
+          />
+
+          <View
+            style={[
+              styles.dome,
+              {
+                width: domeRadius * 2,
+                height: domeHeight,
+                borderTopLeftRadius: domeRadius,
+                borderTopRightRadius: domeRadius,
+                marginLeft: -domeRadius,
+                bottom: -(domeHeight - DomeOverlap),
+              },
+            ]}
+          />
+
+          <View style={styles.header}>
+            <View style={styles.slot} />
+            <View style={styles.headerText}>
+              <Text style={styles.title}>{t('app.name')}</Text>
+            </View>
+            <Pressable
+              onPress={() => router.push('/settings')}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.title')}
+              style={({ pressed }) => [styles.slot, pressed && styles.pressed]}>
+              <Avatar
+                name={profile.name}
+                photo={profile.avatarUrl ?? undefined}
+                premium={premium}
+                size={34}
+              />
+            </Pressable>
+          </View>
+
+          <MascotStage stage={stageFor(reels)} width={Math.min(width * 0.62, 280)} />
         </View>
 
         <View style={styles.count}>
-          <Text style={styles.reels}>{Today.reels}</Text>
+          <Text style={styles.reels}>{reels}</Text>
           <Text style={styles.reelsLabel}>{t('home.reelsToday')}</Text>
         </View>
 
-        <AppBreakdownCard title={t('home.appsToday')} apps={AppUsage} />
-
-        <Card style={styles.progressCard}>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${progress * 100}%` }]} />
-          </View>
-          <View style={styles.progressMeta}>
-            <Text style={styles.progressLeft}>
-              {t('home.toNextStage', { reels: Today.toNextStage })}
-            </Text>
-            <Text style={styles.progressRight}>{t('home.limit', { reels: Today.limit })}</Text>
-          </View>
-        </Card>
-
-        <View style={styles.stats}>
-          <StatTile value={Today.yesterday} label={t('home.yesterday')} />
-          <StatTile value={Today.weekAverage} label={t('home.weekAverage')} />
-        </View>
-
         <ProUpsell />
-      </ScrollView>
+      </View>
     </Backdrop>
   );
 }
 
 const makeStyles = (c: Palette) =>
   StyleSheet.create({
-    content: {
+    page: {
+      flex: 1,
       gap: Spacing.four,
-      paddingTop: Spacing.three,
       paddingBottom: BottomTabInset + Spacing.four,
+    },
+    hero: {
+      alignItems: 'center',
+      paddingTop: Spacing.three,
+      gap: Spacing.three,
+    },
+    /** Reaches past the page's own side margin, so the colour runs edge to edge. */
+    sky: {
+      position: 'absolute',
+      left: -Spacing.four,
+      right: -Spacing.four,
+    },
+    ring: {
+      position: 'absolute',
+      left: '50%',
+      borderWidth: RingWeight,
+      borderColor: c.skyRing,
+    },
+    /** The page itself, curving up into the sky. */
+    dome: {
+      position: 'absolute',
+      left: '50%',
+      backgroundColor: c.background,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: Spacing.three,
+      width: '100%',
     },
-    date: {
-      /** Takes the slack, so the avatar stays pinned to the right edge. */
-      flex: 1,
-      color: c.textSecondary,
-      fontSize: 15,
-      fontFamily: Fonts.bold,
-      fontWeight: '700',
-    },
-    avatar: {
-      width: 36,
-      height: 36,
-      borderRadius: Radius.pill,
+    /** Equal ends, so the title sits dead centre between them. */
+    slot: {
+      width: MinTouch,
+      height: MinTouch,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.border,
     },
-    avatarPressed: {
-      opacity: 0.75,
+    headerText: {
+      flex: 1,
+      alignItems: 'center',
+      gap: Spacing.half,
     },
-    initial: {
+    title: {
       color: c.text,
-      fontSize: 15,
+      fontSize: 20,
       fontFamily: Fonts.extraBold,
       fontWeight: '800',
+      letterSpacing: -0.3,
     },
-    hero: {
-      alignItems: 'center',
-      gap: Spacing.two,
+    pressed: {
+      opacity: 0.75,
     },
-    stage: {
-      color: c.textSecondary,
-      fontSize: 14,
-      fontFamily: Fonts.bold,
-      fontWeight: '700',
-      letterSpacing: 0.4,
-    },
+    /** Takes whatever height is left over, so the number floats between the two. */
     count: {
+      flexGrow: 1,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     reels: {
       color: c.text,
@@ -145,40 +199,5 @@ const makeStyles = (c: Palette) =>
       fontSize: 15,
       fontFamily: Fonts.semiBold,
       fontWeight: '600',
-    },
-    progressCard: {
-      gap: Spacing.two,
-      paddingVertical: Spacing.three,
-    },
-    track: {
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: c.track,
-      overflow: 'hidden',
-    },
-    fill: {
-      height: '100%',
-      borderRadius: 3,
-      backgroundColor: c.accent,
-    },
-    progressMeta: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    progressLeft: {
-      color: c.text,
-      fontSize: 13,
-      fontFamily: Fonts.bold,
-      fontWeight: '700',
-    },
-    progressRight: {
-      color: c.textSecondary,
-      fontSize: 13,
-      fontFamily: Fonts.semiBold,
-      fontWeight: '600',
-    },
-    stats: {
-      flexDirection: 'row',
-      gap: Spacing.two,
     },
   });

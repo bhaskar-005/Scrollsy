@@ -1,12 +1,15 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar, GhostButton, PrimaryButton, Sheet, StatTile } from '@/components/ui';
-import { Account, Pricing, type BoardEntry } from '@/constants/placeholder';
 import { Fonts, Member, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useEntryPrice } from '@/hooks/use-offers';
+import { usePremium } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
+import type { BoardEntry } from '@/lib/board';
 import { t } from '@/i18n';
 
 const AvatarSize = 76;
@@ -34,6 +37,14 @@ export function ProfileSheet({
 }) {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const premium = usePremium();
+  const price = useEntryPrice();
+
+  /** Closes first, so the sheet is not left standing behind the paywall. */
+  const upgrade = () => {
+    onClose();
+    router.push('/paywall');
+  };
 
   return (
     <Sheet visible={entry !== null} onClose={onClose}>
@@ -42,11 +53,11 @@ export function ProfileSheet({
           <View style={styles.identity}>
             <Avatar
               name={entry.name}
-              photo={entry.photo}
+              photo={entry.avatarUrl ?? undefined}
               size={AvatarSize}
               premium={entry.premium}
             />
-            <Text style={styles.name}>{entry.you ? t('battle.you') : entry.name}</Text>
+            <Text style={styles.name}>{entry.isMe ? t('battle.you') : entry.name}</Text>
 
             {entry.premium ? (
               <LinearGradient
@@ -64,7 +75,7 @@ export function ProfileSheet({
             <StatTile compact value={entry.reels} label={t('battle.profile.reels')} />
           </View>
 
-          {Account.premium ? (
+          {premium ? (
             <GhostButton label={t('battle.profile.done')} onPress={onClose} />
           ) : (
             /** Standing next to someone wearing the ring is the whole pitch. */
@@ -76,8 +87,8 @@ export function ProfileSheet({
               <Text style={styles.upsellBody}>{t('battle.profile.upsellBody')}</Text>
               <PrimaryButton
                 shine
-                label={t('battle.profile.upsellCta', { price: Pricing.entry })}
-                onPress={onClose}
+                label={t('battle.profile.upsellCta', { price })}
+                onPress={upgrade}
               />
             </View>
           )}

@@ -1,0 +1,24 @@
+{
+  "name": "doomless-api-prisma",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "dev": "wrangler dev",
+    "deploy": "prisma generate && wrangler deploy",
+    "check": "prisma generate && tsc --noEmit && tsc --noEmit -p test && wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "test": "node --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "hono": "^4.13.8",
+    "jose": "^6.2.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "prisma": "7.10.0",
+    "typescript": "~6.0.3",
+    "wrangler": "^4.132.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "doomless-web",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./dist", "binding": "ASSETS" },
+
+  // Calls the API Worker directly, Worker to Worker, never over the public
+  // internet. `API_URL` still names the path, the binding just carries it.
+  "services": [{ "binding": "API", "service": "doomless-api" }],
+
+  "vars": {
+    "API_URL": "https://doomless-api.your-subdomain.workers.dev/v1",
+    "ANDROID_PACKAGE": "com.scrollsy.app",
+    // The SHA-256 fingerprints of the app's signing keys, comma separated, for
+    // Android App Links. Left empty, the App Links file lists nothing.
+    "ANDROID_SHA256_FINGERPRINTS": ""
+  }
+}

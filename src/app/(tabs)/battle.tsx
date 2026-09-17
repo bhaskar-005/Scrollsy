@@ -2,16 +2,21 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
-import { Avatar } from '@/components/ui';
+import { Avatar, PrimaryButton } from '@/components/ui';
 import { Backdrop } from '@/components/backdrop';
 import { Podium } from '@/components/battle/podium';
 import { ProfileSheet } from '@/components/battle/profile-sheet';
 import { EmptyRow, RankRow } from '@/components/battle/rank-row';
-import { Account, Board, Friends, type BoardEntry } from '@/constants/placeholder';
 import { BottomTabInset, Fonts, MinTouch, Spacing, type Palette } from '@/constants/theme';
+import { useLeaderboard } from '@/hooks/use-leaderboard';
+import { usePremium } from '@/hooks/use-premium';
+import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
+import { useTodayReels } from '@/hooks/use-today-reels';
+import { FreeFriendCap, type BoardEntry } from '@/lib/board';
+import { createInviteLink } from '@/lib/invites';
 import { t } from '@/i18n';
 
 /** How many stand on the podium. Everyone else is a row. */
@@ -39,17 +44,64 @@ const Mask = {
 export default function BattleScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-
-  /** Fewest reels wins, so the board is ranked on read. */
-  const ranked = useMemo(() => [...Board].sort((a, b) => a.reels - b.reels), []);
+  const { profile, signedIn } = useProfile();
+  const premium = usePremium();
+  const { entries: ranked, failed, refresh } = useLeaderboard();
+  const reels = useTodayReels();
 
   const [picked, setPicked] = useState<BoardEntry | null>(null);
-  const pickedRank = picked ? ranked.indexOf(picked) + 1 : 0;
+  const [inviting, setInviting] = useState(false);
+  const [inviteFailed, setInviteFailed] = useState(false);
+  const pickedRank = picked ? ranked.findIndex((entry) => entry.id === picked.id) + 1 : 0;
 
   /** Every place on the board, taken or not, plus the one the plan opens. */
   const listed = ranked.slice(PodiumSize);
-  const seats = Math.max(Friends.freeCap - ranked.filter((entry) => !entry.you).length, 0);
+  const seats = Math.max(FreeFriendCap - ranked.filter((entry) => !entry.isMe).length, 0);
   const rows = listed.length + seats;
+
+  /**
+   * One link, made by the server and reused until it expires, handed to
+   * whatever the phone shares with. The count rides along in the message,
+   * because the number is the dare.
+   */
+  const invite = async () => {
+    if (inviting) {
+      return;
+    }
+    setInviting(true);
+    setInviteFailed(false);
+    try {
+      const link = await createInviteLink();
+      await Share.share({ message: t('battle.invite.message', { reels, link }) });
+    } catch {
+      setInviteFailed(true);
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  if (!signedIn) {
+    return (
+      <Backdrop>
+        <View style={styles.header}>
+          <View style={styles.slot} />
+          <View style={styles.headerText}>
+            <Text style={styles.title}>{t('battle.title')}</Text>
+          </View>
+          <View style={styles.slot} />
+        </View>
+
+        <View style={styles.gate}>
+          <Text style={styles.gateTitle}>{t('battle.signedOut.title')}</Text>
+          <Text style={styles.gateBody}>{t('battle.signedOut.body')}</Text>
+          <PrimaryButton
+            label={t('battle.signedOut.cta')}
+            onPress={() => router.push('/onboarding/welcome')}
+          />
+        </View>
+      </Backdrop>
+    );
+  }
 
   return (
     <Backdrop>
@@ -64,7 +116,12 @@ export default function BattleScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('settings.title')}
           style={({ pressed }) => [styles.slot, pressed && styles.pressed]}>
-          <Avatar name={Account.name} size={34} />
+          <Avatar
+            name={profile.name}
+            photo={profile.avatarUrl ?? undefined}
+            premium={premium}
+            size={34}
+          />
         </Pressable>
       </View>
 
@@ -79,10 +136,22 @@ export default function BattleScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Podium top={ranked.slice(0, PodiumSize)} onPick={setPicked} />
 
+          {/** Nothing cached and nothing fetched. The board is the one screen that needs the network. */}
+          {failed && ranked.length === 0 ? (
+            <Pressable
+              onPress={refresh}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.retry, pressed && styles.pressed]}>
+              <Text style={styles.retryLabel}>{t('common.retry')}</Text>
+            </Pressable>
+          ) : null}
+
+          {inviteFailed ? <Text style={styles.inviteFailed}>{t('battle.invite.failed')}</Text> : null}
+
           <View style={styles.board}>
             {listed.map((entry, index) => (
               <RankRow
-                key={entry.handle}
+                key={entry.id}
                 entry={entry}
                 rank={PodiumSize + index + 1}
                 onPress={() => setPicked(entry)}
@@ -94,7 +163,7 @@ export default function BattleScreen() {
                 key={`seat-${seat}`}
                 rank={PodiumSize + listed.length + seat + 1}
                 label={t(`battle.openSpot.${SeatPrompts[seat % SeatPrompts.length]}`)}
-                onPress={() => {}}
+                onPress={() => void invite()}
               />
             ))}
 
@@ -158,6 +227,46 @@ const makeStyles = (c: Palette) =>
       gap: Spacing.four,
       paddingTop: Spacing.three,
       paddingBottom: BottomTabInset + Spacing.four,
+    },
+    gate: {
+      flex: 1,
+      justifyContent: 'center',
+      gap: Spacing.three,
+      paddingBottom: BottomTabInset,
+    },
+    gateTitle: {
+      color: c.text,
+      fontSize: 24,
+      fontFamily: Fonts.extraBold,
+      fontWeight: '800',
+      textAlign: 'center',
+      letterSpacing: -0.4,
+    },
+    gateBody: {
+      color: c.textSecondary,
+      fontSize: 15,
+      lineHeight: 21,
+      fontFamily: Fonts.medium,
+      fontWeight: '500',
+      textAlign: 'center',
+    },
+    retry: {
+      alignSelf: 'center',
+      paddingVertical: Spacing.two,
+      paddingHorizontal: Spacing.four,
+    },
+    retryLabel: {
+      color: c.textSecondary,
+      fontSize: 15,
+      fontFamily: Fonts.bold,
+      fontWeight: '700',
+    },
+    inviteFailed: {
+      color: c.textSecondary,
+      fontSize: 14,
+      fontFamily: Fonts.semiBold,
+      fontWeight: '600',
+      textAlign: 'center',
     },
     /** One table with shared edges, not a stack of cards. */
     board: {

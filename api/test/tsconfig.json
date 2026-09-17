@@ -1,0 +1,7 @@
+{
+  // Tests run on Node, so they get Node's types. The Worker source does not,
+  // so a Node only API can never slip into code that runs on Cloudflare.
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["./**/*.ts", "../src"]
+}

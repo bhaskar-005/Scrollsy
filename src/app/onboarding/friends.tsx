@@ -3,14 +3,17 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { CountPill, Eyebrow, GhostButton, Headline, PrimaryButton } from '@/components/ui';
 import { StepScreen } from '@/components/onboarding/step-screen';
 import { InviteDuel } from '@/constants/placeholder';
 import { Fonts, Gradients, MaxContentWidth, Spacing, type Palette } from '@/constants/theme';
+import { useOnboardingStep } from '@/hooks/use-onboarding-step';
 import { useTheme } from '@/hooks/use-theme';
+import { useTodayReels } from '@/hooks/use-today-reels';
+import { createInviteLink } from '@/lib/invites';
 import { t } from '@/i18n';
 
 /**
@@ -58,8 +61,12 @@ const Mask = {
 } as const;
 
 export default function FriendsScreen() {
+  useOnboardingStep('friends');
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  const todayReels = useTodayReels();
+  const [sharing, setSharing] = useState(false);
 
   const { width } = useWindowDimensions();
   /** Two plates and the bolt between them, whatever the screen is. */
@@ -99,6 +106,27 @@ export default function FriendsScreen() {
     );
   };
 
+  /**
+   * Shares a real invite link, then moves on either way. A share sheet that
+   * fails is not a reason to trap someone in onboarding, and the same invite
+   * is one tap away on the battle screen afterwards.
+   */
+  const challenge = async () => {
+    if (sharing) {
+      return;
+    }
+    setSharing(true);
+    try {
+      const link = await createInviteLink();
+      await Share.share({ message: t('battle.invite.message', { reels: todayReels, link }) });
+    } catch {
+      // No account yet, or offline. The paywall is still the next screen.
+    } finally {
+      setSharing(false);
+      router.push('/onboarding/paywall');
+    }
+  };
+
   return (
     <StepScreen
       step={5}
@@ -108,7 +136,7 @@ export default function FriendsScreen() {
           <PrimaryButton
             label={t('onboarding.friends.add')}
             icon={<Ionicons name="flash" size={18} color={Gradients.onGradient} />}
-            onPress={() => router.push('/onboarding/paywall')}
+            onPress={() => void challenge()}
           />
           <GhostButton
             label={t('onboarding.friends.decline')}

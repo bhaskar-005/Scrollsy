@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-import { Mascot } from '@/components/mascot';
+import { Mascot } from '@/components/mascot/mascot';
 import type { MascotState } from '@/constants/stages';
 import { Spacing, type Palette } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';

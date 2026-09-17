@@ -1,0 +1,181 @@
+---
+import '../styles/global.css';
+
+type Props = {
+  title: string;
+  description: string;
+  /** Crawlers never run JavaScript, so this is what a link preview in a chat shows. */
+  previewTitle?: string;
+  /** Pages built per request pass false so an expired or failed state is never cached as the answer. */
+  indexable?: boolean;
+};
+
+const { title, description, previewTitle = title, indexable = true } = Astro.props;
+const image = new URL('/mascot.png', Astro.url.origin).toString();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {!indexable && <meta name="robots" content="noindex" />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Scrollsy" />
+    <meta property="og:title" content={previewTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={image} />
+    <meta name="twitter:card" content="summary" />
+
+    <link rel="icon" href="/mascot.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+    />
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="sky" aria-hidden="true">
+        <img class="mascot" src="/mascot.png" alt="" width="220" height="220" />
+      </section>
+
+      <section class="content">
+        <slot />
+      </section>
+    </main>
+
+    <slot name="footer" />
+  </body>
+</html>
+
+<style>
+  .page {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* The page curving up into the sky, the same shape as the app's Home. */
+  .sky {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    min-height: 300px;
+    padding-top: var(--space-6);
+    background: linear-gradient(to bottom, var(--sky-top), var(--sky-mid), var(--sky-bottom));
+    border-radius: 0 0 50% 50% / 0 0 18% 18%;
+  }
+
+  .sky::after {
+    content: '';
+    position: absolute;
+    inset: auto 15% 8% 15%;
+    height: 40%;
+    background: radial-gradient(ellipse at center, var(--glow), transparent 70%);
+  }
+
+  .mascot {
+    position: relative;
+    z-index: 1;
+    width: 220px;
+    height: 220px;
+    margin-bottom: calc(-1 * var(--space-5));
+    animation: float 3.2s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mascot {
+      animation: none;
+    }
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--space-4) var(--space-5);
+    text-align: center;
+  }
+
+  :global(.eyebrow) {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+  }
+
+  :global(.headline) {
+    margin: 0;
+    font-size: 34px;
+    line-height: 40px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  :global(.caption) {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 23px;
+    font-weight: 500;
+  }
+
+  /* Built like the app's PrimaryButton: a 2px gradient shell around a gradient face. */
+  :global(.primary) {
+    display: block;
+    width: 100%;
+    margin-top: var(--space-3);
+    padding: 2px;
+    border-radius: var(--radius-button);
+    background: var(--accent-shell);
+    box-shadow:
+      0 3px 6px rgba(24, 16, 48, 0.16),
+      0 12px 24px rgba(24, 16, 48, 0.2);
+    color: var(--on-gradient);
+    text-decoration: none;
+    transition: transform 0.1s ease-out;
+  }
+
+  :global(.primary span) {
+    display: block;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-face);
+    background: var(--accent-face);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.4);
+    font-size: 17px;
+    font-weight: 700;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  }
+
+  :global(.primary:active) {
+    transform: translateY(3px) scale(0.985);
+  }
+
+  :global(.fine) {
+    margin: 0;
+    color: var(--text-faint);
+    font-size: 13px;
+    font-weight: 500;
+  }
+</style>

@@ -1,0 +1,48 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "doomless-api-prisma",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // Prisma's Postgres driver speaks TCP through Node's APIs.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Every request talks to Postgres, so run the Worker near it.
+  "placement": { "mode": "smart" },
+  "observability": { "enabled": true },
+
+  // Pools Postgres connections at the edge. Workers open a connection per
+  // request, and Supabase's own limit is small, so without this a busy moment
+  // exhausts the database. Create one with:
+  //   npx wrangler hyperdrive create doomless --connection-string "postgresql://..."
+  // then put its id here. Until then the Worker falls back to DATABASE_URL,
+  // which should be Supabase's pooler on port 6543.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "0000000000000000000000000000000000000000000000000000000000000000",
+      "localConnectionString": "postgresql://postgres:postgres@localhost:5432/postgres"
+    }
+  ],
+
+  "vars": {
+    "REVENUECAT_ENTITLEMENT_ID": "pro"
+  },
+
+  // `npx wrangler secret put NAME` for each.
+  // SUPABASE_JWT_SECRET is only for a project still on legacy symmetric keys.
+  "secrets": {
+    "required": [
+      "SUPABASE_URL",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "SUPABASE_SECRET_KEY",
+      "DATABASE_URL",
+      "REVENUECAT_WEBHOOK_AUTH",
+      "REVENUECAT_API_KEY"
+    ]
+  },
+
+  "ratelimits": [
+    { "name": "USER_LIMIT", "namespace_id": "2001", "simple": { "limit": 120, "period": 60 } },
+    { "name": "PUBLIC_LIMIT", "namespace_id": "2002", "simple": { "limit": 30, "period": 60 } }
+  ]
+}

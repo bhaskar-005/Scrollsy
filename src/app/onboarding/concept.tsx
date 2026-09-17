@@ -7,6 +7,7 @@ import { Mascot } from '@/components/mascot';
 import { StepScreen } from '@/components/onboarding/step-screen';
 import { StageOrder } from '@/constants/stages';
 import { Fonts, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useOnboardingStep } from '@/hooks/use-onboarding-step';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n';
 
@@ -26,6 +27,7 @@ const Drift = 34;
 const Dissolve = { duration: 520, timing: 'ease-in-out', effect: 'cross-dissolve' } as const;
 
 export default function ConceptScreen() {
+  useOnboardingStep('concept');
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 

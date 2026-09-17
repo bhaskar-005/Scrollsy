@@ -1,0 +1,22 @@
+{
+  "name": "doomless-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "wrangler types && astro check && npm test && astro build && wrangler deploy --dry-run",
+    "deploy": "astro build && wrangler deploy",
+    "test": "node --test \"test/*.test.ts\"",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.3.1",
+    "astro": "^7.3.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "latest",
+    "typescript": "~6.0.3",
+    "wrangler": "^4.132.0"
+  }
+}

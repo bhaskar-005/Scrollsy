@@ -31,7 +31,13 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+# Worker and website secrets, for `wrangler dev`
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
 
 # typescript
 *.tsbuildinfo

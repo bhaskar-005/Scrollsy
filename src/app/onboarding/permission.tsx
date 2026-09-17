@@ -9,7 +9,10 @@ import { Card, Headline, PrimaryButton, Sheet } from '@/components/ui';
 import { StepScreen } from '@/components/onboarding/step-screen';
 import { Legal } from '@/constants/legal';
 import { Fonts, MinTouch, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useOnboardingStep } from '@/hooks/use-onboarding-step';
+import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
+import { setPreferences } from '@/lib/profile';
 import { t } from '@/i18n';
 
 /**
@@ -32,12 +35,26 @@ const permissions = [
 ] as const;
 
 export default function PermissionScreen() {
+  useOnboardingStep('permission');
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
-  /** Stage 1 has nothing to ask, so Allow just marks the row done. */
-  const [granted, setGranted] = useState<string[]>([]);
+  const { profile } = useProfile();
   const [whyOpen, setWhyOpen] = useState(false);
+
+  /**
+   * Which rows are done, kept on the account rather than in this screen, so
+   * coming back from Settings shows what is already on. Asking Android itself
+   * is stage 3, so Allow marks the row and records the answer.
+   */
+  const granted = [
+    ...(profile.screenTimeGranted ? ['screenTime'] : []),
+    ...(profile.overlayGranted ? ['overlay'] : []),
+  ];
+
+  const allow = (id: (typeof permissions)[number]['id']) => {
+    setPreferences(id === 'screenTime' ? { screenTimeGranted: true } : { overlayGranted: true });
+  };
 
   /** Only the first row you have not done yet is live. The rest wait their turn. */
   const activeIndex = permissions.findIndex((p) => !granted.includes(p.id));
@@ -79,7 +96,7 @@ export default function PermissionScreen() {
                     size="small"
                     disabled={waiting}
                     label={t('onboarding.permission.allow')}
-                    onPress={() => setGranted((current) => [...current, permission.id])}
+                    onPress={() => allow(permission.id)}
                   />
                 )}
               </View>

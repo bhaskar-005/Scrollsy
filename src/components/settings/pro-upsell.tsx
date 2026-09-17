@@ -5,8 +5,9 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Account, Pricing } from '@/constants/placeholder';
 import { Bevel, Fonts, Gradients, MinTouch, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useEntryPrice } from '@/hooks/use-offers';
+import { usePremium } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n';
 
@@ -37,6 +38,8 @@ const ArtSize = 42;
 export function ProUpsell() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const premium = usePremium();
+  const price = useEntryPrice();
 
   const [breath] = useState(() => new Animated.Value(0));
   const [shine] = useState(() => new Animated.Value(0));
@@ -44,7 +47,7 @@ export function ProUpsell() {
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
-    if (Account.premium) {
+    if (premium) {
       return;
     }
 
@@ -67,10 +70,10 @@ export function ProUpsell() {
     loop.start();
 
     return () => loop.stop();
-  }, [breath]);
+  }, [breath, premium]);
 
   useEffect(() => {
-    if (Account.premium || width === 0) {
+    if (premium || width === 0) {
       return;
     }
 
@@ -88,9 +91,9 @@ export function ProUpsell() {
     loop.start();
 
     return () => loop.stop();
-  }, [shine, width]);
+  }, [premium, shine, width]);
 
-  if (Account.premium) {
+  if (premium) {
     return (
       <Pressable
         onPress={() => router.push('/paywall')}
@@ -133,7 +136,7 @@ export function ProUpsell() {
                 <Image source={LockArt} style={styles.art} contentFit="contain" />
 
                 <Text style={styles.cta}>
-                  {t('settings.pro.lockCta', { price: Pricing.entry })}
+                  {t('settings.pro.lockCta', { price })}
                 </Text>
 
                 <Feather name="chevron-right" size={20} color={Gradients.onGradient} />

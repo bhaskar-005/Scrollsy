@@ -19,6 +19,17 @@ export function stageLabel(stage: MascotState): string {
   return t(`stage.${stage}`);
 }
 
+/** He sinks one stage every hundred reels. */
+export const ReelsPerStage = 100;
+
+/**
+ * The stage a count puts him on, stopping at the last. Always derived from the
+ * count, never stored beside it, so the two cannot disagree.
+ */
+export function stageFor(reels: number): Stage {
+  return StageOrder[Math.min(Math.floor(reels / ReelsPerStage), StageOrder.length - 1)];
+}
+
 export const MascotArt: Record<MascotState, number> = {
   fresh: require('@/assets/mascot/fresh.png'),
   buzzed: require('@/assets/mascot/buzzed.png'),
@@ -27,15 +38,6 @@ export const MascotArt: Record<MascotState, number> = {
   cooked: require('@/assets/mascot/cooked.png'),
   gone: require('@/assets/mascot/gone.png'),
 };
-
-/** Cooked reuses the deep space plate, there is nothing further down. */
-export const BackgroundArt = {
-  fresh: require('@/assets/backgrounds/fresh.jpg'),
-  buzzed: require('@/assets/backgrounds/buzzed.jpg'),
-  dizzy: require('@/assets/backgrounds/dizzy.jpg'),
-  fried: require('@/assets/backgrounds/fried.jpg'),
-  cooked: require('@/assets/backgrounds/fried.jpg'),
-} as const;
 
 /** Mascot art is a 512 square, keep him in proportion at any width. */
 export const MascotAspect = 1;

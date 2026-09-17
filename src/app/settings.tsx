@@ -1,23 +1,36 @@
 import Feather from '@expo/vector-icons/Feather';
 import MaskedView from '@react-native-masked-view/masked-view';
 import Constants from 'expo-constants';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { GhostButton } from '@/components/ui';
 import { Backdrop } from '@/components/backdrop';
 import { CounterSheet } from '@/components/settings/counter-sheet';
 import { FeedbackSheet } from '@/components/settings/feedback-sheet';
 import { LanguageSheet } from '@/components/settings/language-sheet';
+import { LimitSheet } from '@/components/settings/limit-sheet';
 import { ProUpsell } from '@/components/settings/pro-upsell';
 import { SettingsGroup, SettingsRow } from '@/components/settings/settings-row';
 import { WidgetSheet } from '@/components/settings/widget-sheet';
-import { Account, CounterPrefs, Languages, Profile } from '@/constants/placeholder';
+import { Languages } from '@/constants/placeholder';
 import { Legal } from '@/constants/legal';
 import { Fonts, MinTouch, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { usePremium } from '@/hooks/use-premium';
+import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
+import { api, signOut } from '@/lib/api';
+import { setAppearance } from '@/lib/appearance';
+import { forgetGoogleAccount } from '@/lib/google';
+import { resetOnboarding } from '@/lib/onboarding';
+import { counterStyleOf, refreshProfile, setPreferences } from '@/lib/profile';
+import { forgetCustomer, restore } from '@/lib/purchases';
+import { syncUsage } from '@/lib/sync';
+import { clearUsage } from '@/lib/usage-store';
 import { t } from '@/i18n';
 
 /** How much of the scroll dissolves into the header on the way up. */
@@ -34,22 +47,72 @@ const Mask = {
 } as const;
 
 /** Which sheet is up. Only ever one, so they share a slot rather than a flag each. */
-type OpenSheet = 'counter' | 'widget' | 'language' | 'feedback' | null;
+type OpenSheet = 'counter' | 'widget' | 'language' | 'feedback' | 'limit' | null;
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const scheme = useColorScheme();
+  const { profile, signedIn } = useProfile();
+  const premium = usePremium();
 
   const [sheet, setSheet] = useState<OpenSheet>(null);
-  /**
-   * Local only. Making this actually repaint the app needs a scheme that is
-   * stored rather than read off the system, which is stage 2 work.
-   */
-  const [dark, setDark] = useState(scheme === 'dark');
+  const [leaving, setLeaving] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
-  const initial = Account.name.trim().charAt(0).toUpperCase();
+  const initial = profile.name.trim().charAt(0).toUpperCase();
   const version = Constants.expoConfig?.version;
+
+  /**
+   * Pushes whatever this device still owes first, so the count lands on the
+   * account that earned it, then takes the account off the phone entirely.
+   */
+  const leave = async (deleteAccount: boolean) => {
+    setLeaving(true);
+    try {
+      if (deleteAccount) {
+        await api('/me', { method: 'DELETE' });
+      } else {
+        await syncUsage();
+      }
+    } catch {
+      // Offline, or already gone. Signing out locally still has to happen.
+    }
+
+    await signOut();
+    await forgetGoogleAccount();
+    await forgetCustomer();
+    await clearUsage();
+    resetOnboarding();
+    setLeaving(false);
+    router.replace('/onboarding/welcome');
+  };
+
+  /** Asks the store what this account owns, for someone sure they already paid. */
+  const bringBackPlan = async () => {
+    if (restoring) {
+      return;
+    }
+    setRestoring(true);
+    const found = await restore();
+    setRestoring(false);
+
+    if (found) {
+      void refreshProfile(true);
+    }
+    Alert.alert(found ? t('paywall.restored') : t('paywall.nothingToRestore'));
+  };
+
+  const confirmDelete = () => {
+    Alert.alert(t('settings.deleteAccount.title'), t('settings.deleteAccount.body'), [
+      { text: t('settings.deleteAccount.cancel'), style: 'cancel' },
+      {
+        text: t('settings.deleteAccount.confirm'),
+        style: 'destructive',
+        onPress: () => void leave(true),
+      },
+    ]);
+  };
 
   return (
     <Backdrop>
@@ -75,20 +138,43 @@ export default function SettingsScreen() {
           </View>
         }>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.account}>
-            <View style={styles.avatar}>
-              <Text style={styles.initial}>{initial}</Text>
+          {signedIn ? (
+            <View style={styles.account}>
+              <View style={styles.avatar}>
+                {profile.avatarUrl ? (
+                  <Image source={{ uri: profile.avatarUrl }} style={styles.photo} contentFit="cover" />
+                ) : (
+                  <Text style={styles.initial}>{initial}</Text>
+                )}
+              </View>
+              <View style={styles.accountText}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {profile.name || t('settings.noName')}
+                </Text>
+                {profile.email ? (
+                  <Text style={styles.email} numberOfLines={1}>
+                    {profile.email}
+                  </Text>
+                ) : null}
+                <Text style={styles.provider}>{t('settings.signedIn')}</Text>
+              </View>
             </View>
-            <View style={styles.accountText}>
-              <Text style={styles.name} numberOfLines={1}>
-                {Account.name}
-              </Text>
-              <Text style={styles.email} numberOfLines={1}>
-                {Account.email}
-              </Text>
-              <Text style={styles.provider}>{t('settings.signedIn')}</Text>
-            </View>
-          </View>
+          ) : (
+            /** Signed out has one job, and it is the same one onboarding opens with. */
+            <Pressable
+              onPress={() => router.push('/onboarding/welcome')}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.account, pressed && styles.pressed]}>
+              <View style={styles.avatar}>
+                <Feather name="user" size={22} color={theme.onAccent} />
+              </View>
+              <View style={styles.accountText}>
+                <Text style={styles.name}>{t('settings.signedOut')}</Text>
+                <Text style={styles.email}>{t('settings.signInPrompt')}</Text>
+              </View>
+              <Feather name="chevron-right" size={19} color={theme.textFaint} />
+            </Pressable>
+          )}
 
           <ProUpsell />
 
@@ -96,7 +182,7 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="circle"
               label={t('settings.rows.counterStyle')}
-              value={t(`settings.counterSheet.styles.${CounterPrefs.style}`)}
+              value={t(`settings.counterSheet.styles.${counterStyleOf(profile)}`)}
               onPress={() => setSheet('counter')}
             />
             <SettingsRow
@@ -121,26 +207,31 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="sliders"
               label={t('settings.rows.dailyLimit')}
-              value={Account.premium ? String(Profile.dailyLimit) : undefined}
-              locked={!Account.premium}
-              onPress={Account.premium ? () => {} : undefined}
+              value={premium ? String(profile.dailyLimit) : undefined}
+              locked={!premium}
+              onPress={premium ? () => setSheet('limit') : () => router.push('/paywall')}
             />
             <SettingsRow
               icon="bell"
               label={t('settings.rows.notifications')}
-              value={t('common.on')}
-              onPress={() => {}}
+              toggle={{
+                value: profile.notificationsEnabled,
+                onValueChange: (next) => setPreferences({ notificationsEnabled: next }),
+              }}
             />
             <SettingsRow
               icon="clock"
               label={t('settings.rows.screenTime')}
-              value={Profile.screenTimeConnected ? t('common.connected') : t('common.off')}
-              onPress={() => {}}
+              value={profile.screenTimeGranted ? t('common.connected') : t('common.off')}
+              onPress={() => router.push('/onboarding/permission')}
             />
             <SettingsRow
               icon="moon"
               label={t('settings.rows.darkMode')}
-              toggle={{ value: dark, onValueChange: setDark }}
+              toggle={{
+                value: scheme === 'dark',
+                onValueChange: (next) => setAppearance(next ? 'dark' : 'light'),
+              }}
             />
             <SettingsRow
               icon="globe"
@@ -162,6 +253,13 @@ export default function SettingsScreen() {
               label={t('settings.rows.rate')}
               onPress={() => Linking.openURL(Legal.store)}
             />
+            {/** Play hands a subscription back on its own. This is for when it did not. */}
+            <SettingsRow
+              icon="refresh-ccw"
+              label={t('settings.rows.restore')}
+              value={restoring ? t('paywall.purchasing') : undefined}
+              onPress={() => void bringBackPlan()}
+            />
             <SettingsRow
               icon="rotate-ccw"
               label={t('settings.rows.replayOnboarding')}
@@ -170,7 +268,26 @@ export default function SettingsScreen() {
             />
           </SettingsGroup>
 
-          <GhostButton label={t('settings.logOut')} onPress={() => {}} />
+          {signedIn ? (
+            <View style={styles.leaving}>
+              <GhostButton
+                label={t('settings.logOut')}
+                onPress={() => {
+                  if (!leaving) {
+                    void leave(false);
+                  }
+                }}
+              />
+              {/** Play requires a way to delete the account from inside the app. */}
+              <Pressable
+                onPress={confirmDelete}
+                disabled={leaving}
+                accessibilityRole="button"
+                style={({ pressed }) => pressed && styles.pressed}>
+                <Text style={styles.delete}>{t('settings.deleteAccount.row')}</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/** Null off a bare config, so there is nothing to show rather than a blank. */}
           {version ? (
@@ -182,6 +299,7 @@ export default function SettingsScreen() {
       <CounterSheet visible={sheet === 'counter'} onClose={() => setSheet(null)} />
       <WidgetSheet visible={sheet === 'widget'} onClose={() => setSheet(null)} />
       <LanguageSheet visible={sheet === 'language'} onClose={() => setSheet(null)} />
+      <LimitSheet visible={sheet === 'limit'} onClose={() => setSheet(null)} />
       <FeedbackSheet visible={sheet === 'feedback'} onClose={() => setSheet(null)} />
     </Backdrop>
   );
@@ -243,7 +361,12 @@ const makeStyles = (c: Palette) =>
       borderRadius: Radius.pill,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
       backgroundColor: c.accent,
+    },
+    photo: {
+      width: '100%',
+      height: '100%',
     },
     initial: {
       color: c.onAccent,
@@ -275,6 +398,19 @@ const makeStyles = (c: Palette) =>
     },
     pressed: {
       opacity: 0.75,
+    },
+    leaving: {
+      gap: Spacing.two,
+      alignItems: 'center',
+    },
+    /** Quiet on purpose. It is not a thing to nudge anyone toward. */
+    delete: {
+      color: c.textFaint,
+      fontSize: 14,
+      fontFamily: Fonts.semiBold,
+      fontWeight: '600',
+      paddingVertical: Spacing.two,
+      paddingHorizontal: Spacing.four,
     },
     version: {
       color: c.textFaint,
