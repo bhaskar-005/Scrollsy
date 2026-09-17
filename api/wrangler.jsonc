@@ -4,6 +4,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
 
+  // Serve the Worker on its workers.dev URL. The app and the RevenueCat webhook
+  // reach it there until a custom domain is set.
+  "workers_dev": true,
+
   // Every request makes at least one call to Supabase, which lives in one
   // region. Smart Placement runs the Worker near that database instead of near
   // the caller, so the chatty leg of each request is the short one.
