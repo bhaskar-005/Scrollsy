@@ -24,24 +24,29 @@ import { onboarding } from './routes/onboarding.ts';
 import { usage } from './routes/usage.ts';
 import { webhooks } from './routes/webhooks.ts';
 
-const app = new Hono<AppEnv>().basePath('/v1');
+const v1 = new Hono<AppEnv>();
 
 /** The largest real body is a month of pending usage, a few kilobytes. */
-app.use(
+v1.use(
   bodyLimit({
     maxSize: 64 * 1024,
     onError: (c) => c.json({ error: 'payload_too_large' }, 413),
   }),
 );
 
-app.route('/auth', auth);
-app.route('/me', me);
-app.route('/feedback', feedback);
-app.route('/usage', usage);
-app.route('/onboarding', onboarding);
-app.route('/leaderboard', leaderboard);
-app.route('/invites', invites);
-app.route('/webhooks', webhooks);
+v1.route('/auth', auth);
+v1.route('/me', me);
+v1.route('/feedback', feedback);
+v1.route('/usage', usage);
+v1.route('/onboarding', onboarding);
+v1.route('/leaderboard', leaderboard);
+v1.route('/invites', invites);
+v1.route('/webhooks', webhooks);
+
+const app = new Hono<AppEnv>();
+
+app.get('/', (c) => c.json({ status: 'ok', message: 'Server is up and active' }));
+app.route('/v1', v1);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
