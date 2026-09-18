@@ -1,8 +1,9 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
-import { subjectOf, toFailure, tokenOf, type DatabaseError } from './contract.ts';
+import { toFailure, tokenOf, type DatabaseError } from './contract.ts';
 import type { AppEnv } from './env.ts';
+import { readAccessToken } from './tokens.ts';
 
 export const invalid = (c: Context) => c.json({ error: 'invalid_request' }, 400);
 export const unauthorized = (c: Context) => c.json({ error: 'not_authenticated' }, 401);
@@ -32,19 +33,20 @@ async function sha256(value: string) {
 }
 
 /**
- * Lets a request through only with a bearer token that names a user, and within
- * that caller's rate limit. The token is not verified here. Postgres verifies
- * it on the query it is forwarded with, so a forged one gets nothing back.
+ * Lets a request through only with a bearer token this Worker signed, and
+ * within that caller's rate limit.
  *
- * The limit is keyed on a hash of the token, not the user id inside it. That id
- * is readable without verification, so keying on it would let anyone forge a
- * token naming someone else and use up their allowance.
+ * The signature is checked here, which it has to be: Postgres is no longer
+ * handed the token and no longer decides who anyone is. Everything past this
+ * point treats `caller.userId` as proven.
+ *
+ * The limit is keyed on a hash of the token rather than the id inside it, so a
+ * forged token cannot be used to spend someone else's allowance before the
+ * check above rejects it.
  */
 export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
-  const authorization = c.req.header('Authorization');
-  const token = tokenOf(authorization);
-  const userId = token ? subjectOf(token) : null;
-  if (!authorization || !token || !userId) {
+  const token = tokenOf(c.req.header('Authorization'));
+  if (!token) {
     return unauthorized(c);
   }
 
@@ -53,6 +55,11 @@ export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
     return rateLimited(c);
   }
 
-  c.set('caller', { authorization, token, userId });
+  const userId = await readAccessToken(token, c.env.JWT_SECRET);
+  if (!userId) {
+    return unauthorized(c);
+  }
+
+  c.set('caller', { token, userId });
   await next();
 };

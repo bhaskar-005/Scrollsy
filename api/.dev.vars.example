@@ -4,8 +4,17 @@
 # The Supabase address and keys live only here, on the server. The app never
 # holds them.
 SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+# The only database credential. Nothing but this Worker ever talks to Postgres.
 SUPABASE_SECRET_KEY=sb_secret_your_key
+
+# Signs this Worker's own session tokens. Any long random value, kept secret.
+# Generate one with `openssl rand -hex 32`. Changing it signs everyone out.
+JWT_SECRET=a-long-random-value-nobody-else-has
+
+# The Google Web client id, the same one the app sends as
+# EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID. Checked as the audience of every ID token,
+# which is what stops a token minted for another app from signing anyone in.
+GOOGLE_CLIENT_ID=000000000000-xxxxxxxx.apps.googleusercontent.com
 
 REVENUECAT_WEBHOOK_AUTH=a-long-random-value-also-entered-in-revenuecat
 REVENUECAT_API_KEY=sk_your_revenuecat_v1_secret_key

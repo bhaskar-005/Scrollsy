@@ -5,45 +5,23 @@ import type { Env } from './env.ts';
 const noSession = { auth: { persistSession: false, autoRefreshToken: false } } as const;
 
 /**
- * The two clients that carry no user hold no per request state, so each is
- * built once per isolate and reused by every request it serves. Keyed on the
- * env object, which a Worker isolate keeps for its lifetime.
- */
-const shared = new WeakMap<Env, { public: SupabaseClient; admin: SupabaseClient }>();
-
-function sharedClients(env: Env) {
-  let clients = shared.get(env);
-  if (!clients) {
-    clients = {
-      public: createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, noSession),
-      admin: createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY, noSession),
-    };
-    shared.set(env, clients);
-  }
-  return clients;
-}
-
-/** No user. Signing in, refreshing, and onboarding before there is an account. */
-export function publicClient(env: Env) {
-  return sharedClients(env).public;
-}
-
-/** Bypasses row level security. Only for what no user can be trusted to do. */
-export function adminClient(env: Env) {
-  return sharedClients(env).admin;
-}
-
-/**
- * Acts as the caller. Their token goes to Postgres untouched, so the database
- * verifies it and every row level security rule and `auth.uid()` check in the
- * migration applies exactly as its tests prove. Nothing here re-verifies it,
- * which saves a round trip to Auth on every request.
+ * One client, holding the only credential this Worker has for the database.
  *
- * Built per request, because it carries that one person's token.
+ * There used to be three: a public one, an admin one, and one built per request
+ * carrying the caller's token so Postgres could apply row level security. None
+ * of that is in the path any more. The Worker verifies the caller itself and
+ * passes their id into every call, so the database no longer decides who
+ * anyone is, and nothing here needs per request state.
+ *
+ * Keyed on the env object, which a Worker isolate keeps for its lifetime.
  */
-export function userClient(env: Env, authorization: string) {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
-    ...noSession,
-    global: { headers: { Authorization: authorization } },
-  });
+const shared = new WeakMap<Env, SupabaseClient>();
+
+export function db(env: Env): SupabaseClient {
+  let client = shared.get(env);
+  if (!client) {
+    client = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY, noSession);
+    shared.set(env, client);
+  }
+  return client;
 }

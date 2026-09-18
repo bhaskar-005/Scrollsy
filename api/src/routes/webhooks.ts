@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 
-import { adminClient } from '../clients.ts';
+import { db } from '../clients.ts';
 import { affectedUsers, entitlementState, type RevenueCatEvent, type Subscriber } from '../entitlement.ts';
 import type { AppEnv, Env } from '../env.ts';
 
@@ -49,7 +49,7 @@ export const webhooks = new Hono<AppEnv>()
       return c.json({ error: 'invalid_request' }, 400);
     }
 
-    const admin = adminClient(c.env);
+    const admin = db(c.env);
     for (const userId of affectedUsers(event)) {
       const state = entitlementState(await fetchSubscriber(c.env, userId), c.env.REVENUECAT_ENTITLEMENT_ID);
       const { error } = await admin.rpc('apply_subscription', {

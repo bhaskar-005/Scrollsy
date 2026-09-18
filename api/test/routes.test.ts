@@ -8,6 +8,7 @@ import { beforeEach, test } from 'node:test';
 
 import app from '../src/index.ts';
 import type { Env, RateLimiter } from '../src/env.ts';
+import { issueAccessToken } from '../src/tokens.ts';
 
 type Sent = { url: string; method: string; headers: Headers; body: string };
 
@@ -46,8 +47,9 @@ function limiter(success = true): RateLimiter & { keys: string[] } {
 function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
     SUPABASE_URL: 'https://db.test',
-    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
     SUPABASE_SECRET_KEY: 'sb_secret_test',
+    JWT_SECRET: jwtSecret,
+    GOOGLE_CLIENT_ID: 'test.apps.googleusercontent.com',
     REVENUECAT_WEBHOOK_AUTH: 'hook-secret',
     REVENUECAT_API_KEY: 'rc-key',
     REVENUECAT_ENTITLEMENT_ID: 'pro',
@@ -59,8 +61,13 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const installId = '22222222-2222-4222-8222-222222222222';
-const payload = btoa(JSON.stringify({ sub: userId })).replace(/=+$/, '');
-const token = `header.${payload}.signature`;
+
+/**
+ * A real signed token, because the Worker verifies them itself now. An
+ * unsigned one would be refused, which is the point of the change.
+ */
+const jwtSecret = 'test-jwt-secret-at-least-32-bytes-long!!';
+const token = await issueAccessToken(userId, jwtSecret, Math.floor(Date.now() / 1000) + 3600);
 const bearer = { Authorization: `Bearer ${token}` };
 
 const jsonResponse = (body: unknown, status = 200) =>
@@ -85,15 +92,29 @@ test('a protected route with no token is refused before anything is called', asy
   assert.equal(sent.length, 0);
 });
 
-test('usage sync forwards the caller token to increment_usage, in one call', async () => {
+test('usage sync names the verified caller to increment_usage, in one call', async () => {
   const days = [{ date: '2026-09-15', apps: { instagram: 4 } }];
   const response = await call(makeEnv(), '/v1/usage/sync', { method: 'POST', headers: bearer, body: { days } });
 
   assert.equal(response.status, 204);
   assert.equal(sent.length, 1);
   assert.equal(sent[0]!.url, 'https://db.test/rest/v1/rpc/increment_usage');
-  assert.equal(sent[0]!.headers.get('Authorization'), `Bearer ${token}`);
-  assert.deepEqual(JSON.parse(sent[0]!.body), { p_days: days });
+  /** The caller's own token never leaves the Worker now. The database gets one credential. */
+  assert.equal(sent[0]!.headers.get('Authorization'), 'Bearer sb_secret_test');
+  /** Who they are rides in the body, taken from a token this Worker verified. */
+  assert.deepEqual(JSON.parse(sent[0]!.body), { p_user: userId, p_days: days });
+});
+
+test('a token this Worker did not sign is refused before any query', async () => {
+  const forged = `${token.split('.').slice(0, 2).join('.')}.notthesignature`;
+  const response = await call(makeEnv(), '/v1/usage/sync', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${forged}` },
+    body: { days: [{ date: '2026-09-15', apps: { instagram: 4 } }] },
+  });
+
+  assert.equal(response.status, 401);
+  assert.equal(sent.length, 0);
 });
 
 test('an empty sync costs no database call', async () => {
@@ -135,8 +156,12 @@ test('onboarding progress works signed out, as anon, limited per install', async
 
   assert.equal(response.status, 204);
   assert.equal(sent[0]!.url, 'https://db.test/rest/v1/rpc/record_onboarding_step');
-  assert.notEqual(sent[0]!.headers.get('Authorization'), `Bearer ${token}`);
-  assert.deepEqual(JSON.parse(sent[0]!.body), { p_install_id: installId, p_step: 'concept' });
+  /** No caller, so the step is recorded against the install alone. */
+  assert.deepEqual(JSON.parse(sent[0]!.body), {
+    p_user: null,
+    p_install_id: installId,
+    p_step: 'concept',
+  });
   assert.deepEqual((env.PUBLIC_LIMIT as ReturnType<typeof limiter>).keys, [`install:${installId}`]);
 });
 
@@ -146,7 +171,22 @@ test('onboarding progress with a token acts as that person, which links the inst
     headers: bearer,
     body: { installId, step: 'notifications' },
   });
-  assert.equal(sent[0]!.headers.get('Authorization'), `Bearer ${token}`);
+  assert.deepEqual(JSON.parse(sent[0]!.body), {
+    p_user: userId,
+    p_install_id: installId,
+    p_step: 'notifications',
+  });
+});
+
+test('an unreadable token on a signed out route is treated as no one, not refused', async () => {
+  const response = await call(makeEnv(), '/v1/onboarding/progress', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer not-a-real-token' },
+    body: { installId, step: 'concept' },
+  });
+
+  assert.equal(response.status, 204);
+  assert.deepEqual(JSON.parse(sent[0]!.body).p_user, null);
 });
 
 test('a made up step or install id never reaches the database', async () => {
@@ -183,7 +223,7 @@ test('the leaderboard comes back in the app shape', async () => {
   assert.deepEqual(await response.json(), [
     { id: userId, name: 'Ravi', avatarUrl: null, premium: true, reels: 48, isMe: true },
   ]);
-  assert.deepEqual(JSON.parse(sent[0]!.body), { p_date: '2026-09-15' });
+  assert.deepEqual(JSON.parse(sent[0]!.body), { p_user: userId, p_date: '2026-09-15' });
 });
 
 test('the webhook refuses a wrong secret without calling anyone', async () => {

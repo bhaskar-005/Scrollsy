@@ -1,9 +1,10 @@
 import { Hono, type Context } from 'hono';
 
-import { publicClient, userClient } from '../clients.ts';
+import { db } from '../clients.ts';
 import { UuidPattern, isOnboardingStep, tokenOf } from '../contract.ts';
 import type { AppEnv } from '../env.ts';
 import { failure, invalid, noContent, rateLimited, readBody } from '../http.ts';
+import { readAccessToken } from '../tokens.ts';
 
 /**
  * Onboarding progress, so a person resumes where they stopped and the funnel
@@ -13,11 +14,14 @@ import { failure, invalid, noContent, rateLimited, readBody } from '../http.ts';
  *
  * Limited per install id, the one identity that exists before an account does.
  */
-function clientFor(c: Context<AppEnv>) {
-  const authorization = c.req.header('Authorization');
-  return authorization && tokenOf(authorization)
-    ? userClient(c.env, authorization)
-    : publicClient(c.env);
+/**
+ * The caller when there is one, null when there is not. A token that does not
+ * verify is treated as no token rather than refused, because this route has to
+ * keep working for someone who has not signed in at all.
+ */
+async function callerOf(c: Context<AppEnv>): Promise<string | null> {
+  const token = tokenOf(c.req.header('Authorization'));
+  return token ? readAccessToken(token, c.env.JWT_SECRET) : null;
 }
 
 export const onboarding = new Hono<AppEnv>()
@@ -34,7 +38,8 @@ export const onboarding = new Hono<AppEnv>()
       return rateLimited(c);
     }
 
-    const { error } = await clientFor(c).rpc('record_onboarding_step', {
+    const { error } = await db(c.env).rpc('record_onboarding_step', {
+      p_user: await callerOf(c),
       p_install_id: installId,
       p_step: step,
     });
@@ -53,7 +58,10 @@ export const onboarding = new Hono<AppEnv>()
       return rateLimited(c);
     }
 
-    const { data, error } = await clientFor(c).rpc('onboarding_resume', { p_install_id: installId });
+    const { data, error } = await db(c.env).rpc('onboarding_resume', {
+      p_user: await callerOf(c),
+      p_install_id: installId,
+    });
     if (error) {
       return failure(c, error);
     }

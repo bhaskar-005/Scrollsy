@@ -5,7 +5,7 @@ import {
   authFailureStatus,
   isOnboardingStep,
   spanDays,
-  emailOf,
+  historyAllowed,
   subjectOf,
   toFailure,
   toPreferencePatch,
@@ -95,14 +95,14 @@ test('the subject comes out of a base64url payload with no padding', () => {
   assert.deepEqual(subjectOf('a.%%%.c'), null);
 });
 
-test('the email comes out of the same payload, and is null when there is none', () => {
-  const encode = (claims: object) =>
-    btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-  assert.deepEqual(emailOf(`header.${encode({ email: 'ravi@example.com' })}.signature`), 'ravi@example.com');
-  assert.deepEqual(emailOf(`header.${encode({ sub: 'u1' })}.signature`), null);
-  assert.deepEqual(emailOf(`header.${encode({ email: 42 })}.signature`), null);
-  assert.deepEqual(emailOf('not-a-token'), null);
+test('free sees a week, Pro sees all of it', () => {
+  const today = '2026-09-18';
+  /** Today and the six behind it, which is the whole free window. */
+  assert.equal(historyAllowed('2026-09-12', false, today), true);
+  /** One day further back is the paid half of the product. */
+  assert.equal(historyAllowed('2026-09-11', false, today), false);
+  assert.equal(historyAllowed('2026-09-11', true, today), true);
+  assert.equal(historyAllowed('2020-01-01', true, today), true);
 });
 
 test('profile and session come out in the app shape', () => {
@@ -110,6 +110,7 @@ test('profile and session come out in the app shape', () => {
     id: 'u1',
     display_name: 'Ravi Menon',
     avatar_url: null,
+    email: 'ravi@example.com',
     daily_limit: 400,
     counter_style: 'pill',
     counter_position_x: 0.86,
@@ -121,10 +122,10 @@ test('profile and session come out in the app shape', () => {
     subscription_status: 'trialing',
     subscription_expires_at: '2026-09-22T00:00:00Z',
   };
-  const profile = toProfile(row, 'ravi@example.com');
+  const profile = toProfile(row);
   assert.deepEqual(profile.name, 'Ravi Menon');
   assert.deepEqual(profile.email, 'ravi@example.com');
-  assert.deepEqual(toProfile(row).email, null);
+  assert.deepEqual(toProfile({ ...row, email: null }).email, null);
   assert.deepEqual(profile.counterPosition, { x: 0.86, y: 0.08 });
   assert.deepEqual(profile.subscription, { status: 'trialing', expiresAt: '2026-09-22T00:00:00Z' });
   assert.deepEqual(toSession({ access_token: 'a', refresh_token: 'r', expires_at: 99 }), {

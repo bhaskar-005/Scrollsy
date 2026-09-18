@@ -24,8 +24,9 @@
   "secrets": {
     "required": [
       "SUPABASE_URL",
-      "SUPABASE_PUBLISHABLE_KEY",
       "SUPABASE_SECRET_KEY",
+      "JWT_SECRET",
+      "GOOGLE_CLIENT_ID",
       "REVENUECAT_WEBHOOK_AUTH",
       "REVENUECAT_API_KEY"
     ]

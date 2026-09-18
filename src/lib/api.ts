@@ -183,10 +183,20 @@ export async function signInWithGoogle(idToken: string): Promise<void> {
   writeSession(session);
 }
 
-/** Revokes the session on the server when it can, and always forgets it here. */
+/**
+ * Revokes the session on the server when it can, and always forgets it here.
+ *
+ * The refresh token goes with it, because that is the half the server stores
+ * and the only half that can outlive this call. Without it a signed out phone
+ * would leave a working session behind on the server.
+ */
 export async function signOut(): Promise<void> {
+  const session = readSession();
   try {
-    await api('/auth/signout', { method: 'POST' });
+    await api('/auth/signout', {
+      method: 'POST',
+      body: { refreshToken: session?.refreshToken ?? '' },
+    });
   } catch {
     // Offline or already expired. Forgetting it locally is what matters.
   } finally {

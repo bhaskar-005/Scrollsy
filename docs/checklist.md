@@ -30,10 +30,10 @@ listed below so they are not lost.
 
 - [ ] Apply the migration to the project, `tcmrgqsbueqflsjrqzrv`. Its direct Postgres host has no IPv4 address, so either paste `supabase/migrations/20260915000000_init.sql` into the SQL editor, or use `npx supabase link` and `npx supabase db push`
 - [ ] A Cloudflare account. Then `npm --prefix api run deploy` and `npm --prefix web run deploy`
-- [ ] The two Supabase keys, from Project Settings, API Keys, into `api/.dev.vars`. `SUPABASE_URL` is already filled in there
-- [ ] Worker secrets for production, `cd api && npx wrangler secret put NAME` for each: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `REVENUECAT_WEBHOOK_AUTH`, `REVENUECAT_API_KEY`
+- [ ] The Supabase secret key, from Project Settings, API Keys, into `api/.dev.vars`. `SUPABASE_URL` is already filled in there. The publishable key is no longer used by anything: nothing but the Worker reaches the database
+- [ ] Worker secrets for production, `cd api && npx wrangler secret put NAME` for each: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `REVENUECAT_WEBHOOK_AUTH`, `REVENUECAT_API_KEY`. They must be Secrets, not plain Variables, or `wrangler deploy` refuses to run. `JWT_SECRET` is yours to invent, `openssl rand -hex 32`, and changing it later signs everyone out
 - [ ] The Worker's address in `.env.local` as `EXPO_PUBLIC_API_URL`, and in `web/wrangler.jsonc` as `API_URL`. `.env.local` and `api/.dev.vars` now exist with every line commented and explained, so filling them in is the whole job
-- [ ] Google Cloud OAuth clients, one Web and one Android with the signing key's SHA-1, entered in Supabase Auth's Google provider and in `.env.local` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`. The app side is built and waiting on these
+- [ ] Google Cloud OAuth clients, one Web and one Android with the signing key's SHA-1. The Web client id goes in two places, both ours: `.env` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` and the Worker secret `GOOGLE_CLIENT_ID`. Supabase Auth is not involved and its Google provider can stay switched off, since the Worker verifies Google's token itself
 - [ ] RevenueCat project, Play products, an entitlement named `pro`, webhook pointed at `<worker>/v1/webhooks/revenuecat` with the Authorization value you set above
 - [ ] Real Terms and Privacy pages. `src/constants/legal.ts` still points at `example.com`, and a login screen with dead legal links gets rejected
 - [ ] Dollar prices for the monthly and yearly plans. The entry offer is settled, one rupee in India and one dollar elsewhere, but `Pricing.monthly` and `Pricing.yearly` are still rupees only
@@ -176,6 +176,7 @@ one database means two sets of rules to keep in step. See its README.
 - [x] `npm run test:api-prisma`, 35 tests, signing real tokens rather than stubbing the check
 - [x] Bundles at 1.31 MB gzipped, against 151 KB for `api/`
 - [x] Decided: `api/` ships. `api-prisma/` stays as a working alternative, not deployed. Two backends on one database would mean two sets of rules to keep in step
+- [x] `api/` no longer uses Supabase Auth at all. Its own `users` table, Google ID tokens verified in the Worker with `jose`, and its own signed access tokens with rotating refresh tokens. Row level security is gone with it: the Worker names the caller in every call. No MAU limit, and the schema is plain Postgres that would run anywhere
 
 ### Website, `web/`, Astro on Cloudflare
 

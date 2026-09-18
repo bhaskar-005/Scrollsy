@@ -7,23 +7,61 @@
 -- (a log), and onboarding progress (per install, since it starts before there
 -- is an account).
 --
--- Access: clients read their own rows through RLS and write almost nothing
--- directly. Every write that needs validation, touches another person, or has
--- to be atomic goes through a security definer function, and every table
--- revokes the grants Supabase hands `anon` and `authenticated` by default, so
--- the only way in is the way this file opens.
+-- Access: no client ever reaches this database. The API Worker holds the only
+-- credentials, verifies the caller itself, and passes who they are into every
+-- function here as an argument. That is why nothing below reads `auth.uid()`
+-- and no table carries a row level security policy: the Worker is the one
+-- place permissions live, and this schema is plain Postgres that would run
+-- anywhere.
+--
+-- Everything that needs validation, touches another person, or has to be
+-- atomic still goes through a security definer function, because a transaction
+-- is the only thing that can hold those guarantees.
 
 -- ---------------------------------------------------------------------------
--- profiles: the account. Created by trigger on sign up.
+-- users: who someone is, and the only thing Google's answer is trusted for.
+-- Kept apart from `profiles` so identity and preferences can move separately,
+-- and so swapping Google for another provider touches one table.
+-- ---------------------------------------------------------------------------
+
+create table public.users (
+  id uuid primary key default gen_random_uuid(),
+  -- Google's subject claim. Stable for the life of the account, and the only
+  -- safe join key: an email can be changed and handed to someone else.
+  google_sub text not null unique,
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- refresh_tokens: one row per live session, so signing out really ends it.
+-- ---------------------------------------------------------------------------
+
+create table public.refresh_tokens (
+  -- The SHA-256 of the token, never the token. A copy of this table is then
+  -- not a pile of working sessions.
+  token_hash text primary key,
+  user_id uuid not null references public.users (id) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create index refresh_tokens_user_id_idx on public.refresh_tokens (user_id);
+
+-- ---------------------------------------------------------------------------
+-- profiles: the account. Created alongside the user on first sign in.
 -- ---------------------------------------------------------------------------
 
 create table public.profiles (
-  id uuid primary key references auth.users (id) on delete cascade,
+  id uuid primary key references public.users (id) on delete cascade,
 
   display_name text not null default '',
   avatar_url text,
+  -- Sits here rather than on `users` so reading an account is one row and no
+  -- join. There is exactly one profile per user, so nothing can drift.
+  email text,
 
-  -- Preferences. The only columns a person can write, see the grant below.
+  -- Preferences. The only columns a person can change, a list the Worker holds.
   daily_limit integer not null default 400 check (daily_limit between 1 and 10000),
   counter_style text not null default 'pill'
     check (counter_style in ('pill', 'outline', 'glass', 'plain', 'mascot')),
@@ -53,76 +91,73 @@ create table public.profiles (
   created_at timestamptz not null default now()
 );
 
-alter table public.profiles enable row level security;
+-- Which columns a person may change is no longer a column level grant, because
+-- there is no role to grant to. `toPreferencePatch` in the Worker is where that
+-- list lives now, and its tests are what prove it.
 
-create policy "Read own profile" on public.profiles
-  for select to authenticated
-  using (id = (select auth.uid()));
-
-create policy "Update own profile" on public.profiles
-  for update to authenticated
-  using (id = (select auth.uid()))
-  with check (id = (select auth.uid()));
-
-revoke all on public.profiles from anon, authenticated;
-grant select on public.profiles to authenticated;
--- Column level. Subscription, invite and premium columns stay out of reach even
--- on a person's own row.
-grant update (
-  display_name,
-  avatar_url,
-  daily_limit,
-  counter_style,
-  counter_position_x,
-  counter_position_y,
-  notifications_enabled,
-  screen_time_granted,
-  overlay_granted
-) on public.profiles to authenticated;
-
-create function public.handle_new_user()
-returns trigger
+-- Signing in, as one statement. Returns the account id, making a user and a
+-- profile the first time and touching them after.
+--
+-- Google's name and photo fill an empty profile and refresh the photo, but
+-- never overwrite a display name someone chose for themselves.
+create function public.upsert_google_user(
+  p_sub text,
+  p_email text,
+  p_name text,
+  p_avatar text
+)
+returns uuid
 language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  me uuid;
 begin
-  insert into public.profiles (id, display_name, avatar_url)
-  values (
-    new.id,
-    coalesce(
-      new.raw_user_meta_data ->> 'full_name',
-      new.raw_user_meta_data ->> 'name',
-      split_part(new.email, '@', 1),
-      ''
-    ),
-    coalesce(new.raw_user_meta_data ->> 'avatar_url', new.raw_user_meta_data ->> 'picture')
-  );
-  return new;
+  if coalesce(p_sub, '') = '' then
+    raise exception 'sign_in_failed' using errcode = '28000';
+  end if;
+
+  select u.id into me from public.users u where u.google_sub = p_sub;
+
+  if me is null then
+    insert into public.users (google_sub) values (p_sub) returning id into me;
+
+    insert into public.profiles (id, display_name, avatar_url, email)
+    values (
+      me,
+      coalesce(nullif(p_name, ''), split_part(coalesce(p_email, ''), '@', 1), ''),
+      p_avatar,
+      p_email
+    );
+  else
+    update public.users set last_seen_at = now() where id = me;
+
+    update public.profiles set
+      display_name = case
+        when display_name = '' then coalesce(nullif(p_name, ''), '')
+        else display_name
+      end,
+      avatar_url = coalesce(p_avatar, avatar_url),
+      email = coalesce(p_email, email)
+    where id = me;
+  end if;
+
+  return me;
 end;
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
-
--- Used inside RLS policies, so it is stable and wrapped in a select at each
--- call site, which lets Postgres evaluate it once per query, not once per row.
-create function public.is_premium()
+-- Was read from the session inside a policy. Now the caller says who they are,
+-- because the Worker has already proved it.
+create function public.is_premium(p_user uuid)
 returns boolean
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select coalesce(
-    (select p.premium from public.profiles p where p.id = (select auth.uid())),
-    false
-  );
+  select coalesce((select p.premium from public.profiles p where p.id = p_user), false);
 $$;
-
-revoke execute on function public.is_premium() from public, anon;
-grant execute on function public.is_premium() to authenticated;
 
 -- Writes a person's subscription from RevenueCat's current record of them.
 -- Service role only. `premium` follows on its own, being generated.
@@ -152,10 +187,6 @@ begin
 end;
 $$;
 
-revoke execute on function public.apply_subscription(uuid, text, text, text, timestamptz)
-  from public, anon, authenticated;
-grant execute on function public.apply_subscription(uuid, text, text, text, timestamptz)
-  to service_role;
 
 -- ---------------------------------------------------------------------------
 -- daily_usage: one row per person, per day, per app. A day's total is the sum
@@ -172,17 +203,8 @@ create table public.daily_usage (
   primary key (user_id, usage_date, app_key)
 );
 
-alter table public.daily_usage enable row level security;
-
-create policy "Read own last 7 days, or all of it with Pro" on public.daily_usage
-  for select to authenticated
-  using (
-    user_id = (select auth.uid())
-    and (usage_date >= current_date - 6 or (select public.is_premium()))
-  );
-
-revoke all on public.daily_usage from anon, authenticated;
-grant select on public.daily_usage to authenticated;
+-- The seven day window that used to be half of this table's policy is now
+-- `historyAllowed` in the Worker, which decides it before the query is sent.
 
 -- The single write path for usage. The device sends every pending day in one
 -- call. Additive, so a retried or duplicated call adds rather than overwrites.
@@ -193,14 +215,14 @@ grant select on public.daily_usage to authenticated;
 -- the 30 day window, a future date from a wrong device clock, an app key this
 -- schema does not know yet. Raising would fail the whole batch, the device
 -- would retry it forever, and one bad day would block every good one behind it.
-create function public.increment_usage(p_days jsonb)
+create function public.increment_usage(p_user uuid, p_days jsonb)
 returns void
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  me uuid := auth.uid();
+  me uuid := p_user;
   day jsonb;
   day_date date;
   app record;
@@ -234,8 +256,6 @@ begin
 end;
 $$;
 
-revoke execute on function public.increment_usage(jsonb) from public, anon;
-grant execute on function public.increment_usage(jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- friendships: both directions stored, written together, only by accept_invite
@@ -253,26 +273,18 @@ create table public.friendships (
 -- account deletion from scanning the table for the other direction.
 create index friendships_friend_id_idx on public.friendships (friend_id);
 
-alter table public.friendships enable row level security;
-
-create policy "Read own friendships" on public.friendships
-  for select to authenticated
-  using (user_id = (select auth.uid()));
-
-revoke all on public.friendships from anon, authenticated;
-grant select on public.friendships to authenticated;
 
 -- Hands back the person's live invite code, minting a fresh one only when there
 -- is none or it has less than a day left, so tapping invite ten times reuses
 -- one code instead of leaving ten behind.
-create function public.create_invite()
+create function public.create_invite(p_user uuid)
 returns text
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  me uuid := auth.uid();
+  me uuid := p_user;
   code text;
 begin
   if me is null then
@@ -290,8 +302,6 @@ begin
 end;
 $$;
 
-revoke execute on function public.create_invite() from public, anon;
-grant execute on function public.create_invite() to authenticated;
 
 -- Free accounts stop at 5 friends. Internal, called only from accept_invite.
 create function public.friend_cap_reached(p_user uuid)
@@ -307,18 +317,17 @@ as $$
   where p.id = p_user;
 $$;
 
-revoke execute on function public.friend_cap_reached(uuid) from public, anon, authenticated;
 
 -- Returns the inviter's id. Raises a named error the client maps to copy:
 -- invite_invalid, invite_own, friend_cap_self, friend_cap_inviter.
-create function public.accept_invite(p_code text)
+create function public.accept_invite(p_user uuid, p_code text)
 returns uuid
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  me uuid := auth.uid();
+  me uuid := p_user;
   inviter uuid;
 begin
   if me is null then
@@ -359,8 +368,6 @@ begin
 end;
 $$;
 
-revoke execute on function public.accept_invite(text) from public, anon;
-grant execute on function public.accept_invite(text) to authenticated;
 
 -- Security definer so it can read friends' profiles and usage, which RLS keeps
 -- private. It returns only what a friend may see: never an email, never an
@@ -368,7 +375,7 @@ grant execute on function public.accept_invite(text) to authenticated;
 --
 -- p_date is the device's own calendar day, bounded to a day either side of the
 -- server's, which is timezone slack and nothing more.
-create function public.leaderboard_for_me(p_date date)
+create function public.leaderboard_for_me(p_user uuid, p_date date)
 returns table (
   id uuid,
   display_name text,
@@ -383,7 +390,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  me uuid := auth.uid();
+  me uuid := p_user;
 begin
   if me is null then
     raise exception 'not_authenticated' using errcode = '28000';
@@ -417,8 +424,6 @@ begin
 end;
 $$;
 
-revoke execute on function public.leaderboard_for_me(date) from public, anon;
-grant execute on function public.leaderboard_for_me(date) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- feedback: inserted straight from the app, read by the team in the dashboard
@@ -426,20 +431,11 @@ grant execute on function public.leaderboard_for_me(date) to authenticated;
 
 create table public.feedback (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
   topic text not null check (topic in ('bug', 'idea', 'billing', 'other')),
   message text not null check (char_length(message) between 1 and 4000),
   created_at timestamptz not null default now()
 );
-
-alter table public.feedback enable row level security;
-
-create policy "Send feedback as yourself" on public.feedback
-  for insert to authenticated
-  with check (user_id = (select auth.uid()));
-
-revoke all on public.feedback from anon, authenticated;
-grant insert (topic, message) on public.feedback to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- onboarding_progress: one row per install, so a person resumes where they
@@ -473,8 +469,6 @@ create table public.onboarding_progress (
 create index onboarding_progress_user_id_idx on public.onboarding_progress (user_id)
   where user_id is not null;
 
-alter table public.onboarding_progress enable row level security;
-revoke all on public.onboarding_progress from anon, authenticated;
 
 -- Where a step sits in the flow. Null for anything that is not a step.
 create function public.onboarding_step_rank(p_step text)
@@ -501,14 +495,15 @@ alter table public.onboarding_progress
 -- The furthest step only ever moves forward, the first reached time of a step
 -- is never overwritten, and completion is stamped once. A row that belongs to
 -- an account is left alone by anyone else, signed in or not.
-create function public.record_onboarding_step(p_install_id uuid, p_step text)
+create function public.record_onboarding_step(p_user uuid, p_install_id uuid, p_step text)
 returns void
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  me uuid := auth.uid();
+  /** Null until they sign in, which is the point: onboarding starts before an account. */
+  me uuid := p_user;
 begin
   if p_install_id is null or public.onboarding_step_rank(p_step) is null then
     raise exception 'onboarding_step_invalid' using errcode = '22023';
@@ -540,13 +535,11 @@ begin
 end;
 $$;
 
-revoke execute on function public.record_onboarding_step(uuid, text) from public;
-grant execute on function public.record_onboarding_step(uuid, text) to anon, authenticated;
 
 -- Where to pick up. For a signed in person it also looks across every install
 -- their account has used, so a new phone resumes too. Returns no row when
 -- nothing is known, which means start from the beginning.
-create function public.onboarding_resume(p_install_id uuid)
+create function public.onboarding_resume(p_user uuid, p_install_id uuid)
 returns table (step text, completed boolean)
 language sql
 stable
@@ -558,12 +551,10 @@ as $$
     bool_or(p.completed_at is not null)
   from public.onboarding_progress p
   where p.install_id = p_install_id
-     or ((select auth.uid()) is not null and p.user_id = (select auth.uid()))
+     or (p_user is not null and p.user_id = p_user)
   having count(*) > 0;
 $$;
 
-revoke execute on function public.onboarding_resume(uuid) from public;
-grant execute on function public.onboarding_resume(uuid) to anon, authenticated;
 
 -- For the team, in the dashboard's SQL editor. How many installs reached each
 -- step, and how many stopped there. Not exposed through the API.
@@ -584,7 +575,6 @@ left join public.onboarding_progress progress
 group by steps.step, steps.position
 order by steps.position;
 
-revoke all on public.onboarding_funnel from anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- invite_preview: who sent a link, for the invite web page, before the person
@@ -604,5 +594,20 @@ as $$
   where p.invite_code = p_code and p.invite_expires_at > now();
 $$;
 
-revoke execute on function public.invite_preview(text) from public;
-grant execute on function public.invite_preview(text) to anon, authenticated;
+-- ---------------------------------------------------------------------------
+-- Nothing but the API Worker may reach any of this.
+--
+-- Guarded, because `anon` and `authenticated` are roles Supabase creates for
+-- its own client libraries. On a plain Postgres they do not exist and this is
+-- a no-op, which is the point: this file has to run anywhere.
+-- ---------------------------------------------------------------------------
+
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    revoke all on all tables in schema public from anon, authenticated;
+    revoke all on all functions in schema public from anon, authenticated;
+    revoke all on all sequences in schema public from anon, authenticated;
+  end if;
+end
+$$;

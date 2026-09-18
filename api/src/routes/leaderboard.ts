@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 
-import { userClient } from '../clients.ts';
+import { db } from '../clients.ts';
 import { DatePattern } from '../contract.ts';
 import type { AppEnv } from '../env.ts';
 import { failure, invalid, requireUser } from '../http.ts';
@@ -12,7 +12,8 @@ export const leaderboard = new Hono<AppEnv>().get('/', requireUser, async (c) =>
     return invalid(c);
   }
 
-  const { data, error } = await userClient(c.env, c.var.caller.authorization).rpc('leaderboard_for_me', {
+  const { data, error } = await db(c.env).rpc('leaderboard_for_me', {
+    p_user: c.var.caller.userId,
     p_date: date,
   });
   if (error) {

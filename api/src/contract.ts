@@ -84,6 +84,28 @@ export function spanDays(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1;
 }
 
+/** Today and the six days behind it. Free stops there, which is the whole point. */
+export const FreeHistoryDays = 7;
+
+/**
+ * The server's own date key. The device sends its local one for writing, which
+ * is right, because a day is whatever the person was living in. This is only
+ * for deciding how far back a read reaches.
+ */
+export function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Whether a range may be read without Pro. Was half of the row level security
+ * policy on `daily_usage`, and is the reason the free tier can count but not
+ * look back: the number you want to compare against is the one you have to pay
+ * to see.
+ */
+export function historyAllowed(from: string, premium: boolean, today: string): boolean {
+  return premium || spanDays(from, today) <= FreeHistoryDays;
+}
+
 /** The preference fields the app may change, and the column each one writes. */
 const PreferenceColumns = {
   dailyLimit: 'daily_limit',
@@ -120,7 +142,7 @@ export function toPreferencePatch(body: unknown): Record<string, unknown> | null
 
 /** Exactly the columns `GET /me` reads. Never `select *`. */
 export const ProfileColumns =
-  'id, display_name, avatar_url, daily_limit, counter_style, counter_position_x, counter_position_y, ' +
+  'id, display_name, avatar_url, email, daily_limit, counter_style, counter_position_x, counter_position_y, ' +
   'notifications_enabled, screen_time_granted, overlay_granted, ' +
   'premium, subscription_status, subscription_expires_at';
 
@@ -128,6 +150,7 @@ export type ProfileRow = {
   id: string;
   display_name: string;
   avatar_url: string | null;
+  email: string | null;
   daily_limit: number;
   counter_style: string;
   counter_position_x: number;
@@ -140,11 +163,11 @@ export type ProfileRow = {
   subscription_expires_at: string | null;
 };
 
-export function toProfile(row: ProfileRow, email: string | null = null) {
+export function toProfile(row: ProfileRow) {
   return {
     id: row.id,
     name: row.display_name,
-    email,
+    email: row.email,
     avatarUrl: row.avatar_url,
     dailyLimit: row.daily_limit,
     counterStyle: row.counter_style,
@@ -199,15 +222,3 @@ export function subjectOf(token: string): string | null {
   return typeof sub === 'string' ? sub : null;
 }
 
-/**
- * The email inside a token. Auth owns it, not `profiles`, so the alternative
- * would be a second request to Auth on every profile read.
- *
- * Unverified here, like the id above, and only ever answered alongside a row
- * Postgres agreed to hand over for this same token. A forged token gets a 401
- * from the database before this is reached.
- */
-export function emailOf(token: string): string | null {
-  const email = claimsOf(token)?.email;
-  return typeof email === 'string' ? email : null;
-}

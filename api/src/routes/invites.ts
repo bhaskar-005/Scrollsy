@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 
-import { publicClient, userClient } from '../clients.ts';
+import { db } from '../clients.ts';
 import { InviteCodePattern } from '../contract.ts';
 import type { AppEnv } from '../env.ts';
 import { failure, rateLimited, requireUser } from '../http.ts';
@@ -11,7 +11,9 @@ const notFound = { error: 'invite_invalid' } as const;
 export const invites = new Hono<AppEnv>()
   /** A live code for the caller, reused until it is close to expiring. */
   .post('/', requireUser, async (c) => {
-    const { data, error } = await userClient(c.env, c.var.caller.authorization).rpc('create_invite');
+    const { data, error } = await db(c.env).rpc('create_invite', {
+      p_user: c.var.caller.userId,
+    });
     return error ? failure(c, error) : c.json({ code: data as string });
   })
 
@@ -36,7 +38,7 @@ export const invites = new Hono<AppEnv>()
       return rateLimited(c);
     }
 
-    const { data, error } = await publicClient(c.env).rpc('invite_preview', { p_code: code });
+    const { data, error } = await db(c.env).rpc('invite_preview', { p_code: code });
     if (error) {
       return failure(c, error);
     }
@@ -56,7 +58,8 @@ export const invites = new Hono<AppEnv>()
       return c.json(notFound, 404);
     }
 
-    const { data, error } = await userClient(c.env, c.var.caller.authorization).rpc('accept_invite', {
+    const { data, error } = await db(c.env).rpc('accept_invite', {
+      p_user: c.var.caller.userId,
       p_code: code,
     });
     return error ? failure(c, error) : c.json({ inviterId: data as string });
