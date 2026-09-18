@@ -9,10 +9,10 @@ import { Card, Headline, PrimaryButton, Sheet } from '@/components/ui';
 import { StepScreen } from '@/components/onboarding/step-screen';
 import { Legal } from '@/constants/legal';
 import { Fonts, MinTouch, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useAccess } from '@/hooks/use-access';
 import { useOnboardingStep } from '@/hooks/use-onboarding-step';
-import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
-import { setPreferences } from '@/lib/profile';
+import { requestAccess } from '@/lib/permissions';
 import { t } from '@/i18n';
 
 /**
@@ -39,21 +39,23 @@ export default function PermissionScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
-  const { profile } = useProfile();
   const [whyOpen, setWhyOpen] = useState(false);
 
   /**
-   * Which rows are done, kept on the account rather than in this screen, so
-   * coming back from Settings shows what is already on. Asking Android itself
-   * is stage 3, so Allow marks the row and records the answer.
+   * Which rows are done, asked of Android itself and re-asked every time the
+   * app comes back to the front. A row ticks because the setting is on, never
+   * because the button was tapped.
    */
+  const access = useAccess();
   const granted = [
-    ...(profile.screenTimeGranted ? ['screenTime'] : []),
-    ...(profile.overlayGranted ? ['overlay'] : []),
+    ...(access.screenTime ? ['screenTime'] : []),
+    ...(access.overlay ? ['overlay'] : []),
   ];
 
-  const allow = (id: (typeof permissions)[number]['id']) => {
-    setPreferences(id === 'screenTime' ? { screenTimeGranted: true } : { overlayGranted: true });
+  /** Sends them to the right Settings page, then reads what came of it. */
+  const allow = async (id: (typeof permissions)[number]['id']) => {
+    await requestAccess(id);
+    access.recheck();
   };
 
   /** Only the first row you have not done yet is live. The rest wait their turn. */
@@ -96,7 +98,7 @@ export default function PermissionScreen() {
                     size="small"
                     disabled={waiting}
                     label={t('onboarding.permission.allow')}
-                    onPress={() => allow(permission.id)}
+                    onPress={() => void allow(permission.id)}
                   />
                 )}
               </View>

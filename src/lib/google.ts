@@ -82,6 +82,8 @@ export async function signIn(): Promise<SignInResult> {
     if (code === module.statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
       return 'unavailable';
     }
+    /** Nothing above the button can say why, so the reason goes to the log. */
+    console.warn('google sign in', code ?? '', error);
     return 'failed';
   }
 }

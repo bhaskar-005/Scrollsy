@@ -19,6 +19,7 @@ import { WidgetSheet } from '@/components/settings/widget-sheet';
 import { Languages } from '@/constants/placeholder';
 import { Legal } from '@/constants/legal';
 import { Fonts, MinTouch, Radius, Spacing, type Palette } from '@/constants/theme';
+import { useAccess } from '@/hooks/use-access';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePremium } from '@/hooks/use-premium';
 import { useProfile } from '@/hooks/use-profile';
@@ -27,6 +28,7 @@ import { api, signOut } from '@/lib/api';
 import { setAppearance } from '@/lib/appearance';
 import { forgetGoogleAccount } from '@/lib/google';
 import { resetOnboarding } from '@/lib/onboarding';
+import { requestNotifications } from '@/lib/permissions';
 import { counterStyleOf, refreshProfile, setPreferences } from '@/lib/profile';
 import { forgetCustomer, restore } from '@/lib/purchases';
 import { syncUsage } from '@/lib/sync';
@@ -55,6 +57,7 @@ export default function SettingsScreen() {
   const scheme = useColorScheme();
   const { profile, signedIn } = useProfile();
   const premium = usePremium();
+  const access = useAccess();
 
   const [sheet, setSheet] = useState<OpenSheet>(null);
   const [leaving, setLeaving] = useState(false);
@@ -86,6 +89,14 @@ export default function SettingsScreen() {
     resetOnboarding();
     setLeaving(false);
     router.replace('/onboarding/welcome');
+  };
+
+  /**
+   * Turning notifications on asks Android and keeps its answer, so a refusal
+   * leaves the switch off rather than showing an on switch that sends nothing.
+   */
+  const allowNotifications = async (wanted: boolean) => {
+    setPreferences({ notificationsEnabled: wanted ? await requestNotifications() : false });
   };
 
   /** Asks the store what this account owns, for someone sure they already paid. */
@@ -211,18 +222,19 @@ export default function SettingsScreen() {
               locked={!premium}
               onPress={premium ? () => setSheet('limit') : () => router.push('/paywall')}
             />
+            {/** Turning it on asks Android, so the switch lands where Android left it. */}
             <SettingsRow
               icon="bell"
               label={t('settings.rows.notifications')}
               toggle={{
                 value: profile.notificationsEnabled,
-                onValueChange: (next) => setPreferences({ notificationsEnabled: next }),
+                onValueChange: (next) => void allowNotifications(next),
               }}
             />
             <SettingsRow
               icon="clock"
               label={t('settings.rows.screenTime')}
-              value={profile.screenTimeGranted ? t('common.connected') : t('common.off')}
+              value={access.screenTime ? t('common.connected') : t('common.off')}
               onPress={() => router.push('/onboarding/permission')}
             />
             <SettingsRow
