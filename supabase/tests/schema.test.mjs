@@ -105,7 +105,7 @@ console.log('\nincrement_usage');
   const junk = [
     { date: await shift(-40), apps: { instagram: 9 } },
     { date: await shift(5), apps: { instagram: 9 } },
-    { date: today, apps: { snapchat: 9, tiktok: -4, youtube: 'lots' } },
+    { date: today, apps: { bereal: 9, tiktok: -4, youtube: 'lots' } },
     { date: null, apps: { instagram: 9 } },
     { apps: { instagram: 9 } },
     { date: today, apps: { youtube: 999999 } },

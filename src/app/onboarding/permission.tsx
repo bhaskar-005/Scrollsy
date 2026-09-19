@@ -21,6 +21,12 @@ import { t } from '@/i18n';
  */
 const permissions = [
   {
+    id: 'counting',
+    titleKey: 'onboarding.permission.countingTitle',
+    bodyKey: 'onboarding.permission.countingBody',
+    whyKey: 'onboarding.permission.whyCounting',
+  },
+  {
     id: 'screenTime',
     titleKey: 'onboarding.permission.screenTimeTitle',
     bodyKey: 'onboarding.permission.screenTimeBody',
@@ -48,6 +54,7 @@ export default function PermissionScreen() {
    */
   const access = useAccess();
   const granted = [
+    ...(access.counting ? ['counting'] : []),
     ...(access.screenTime ? ['screenTime'] : []),
     ...(access.overlay ? ['overlay'] : []),
   ];

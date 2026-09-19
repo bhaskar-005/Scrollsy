@@ -4,12 +4,16 @@ import { AppState } from 'react-native';
 import { hasAccess } from '@/lib/permissions';
 import { readProfile, setPreferences } from '@/lib/profile';
 
-type Access = { screenTime: boolean; overlay: boolean };
+type Access = { counting: boolean; screenTime: boolean; overlay: boolean };
 
 const read = (): Access => ({
+  counting: hasAccess('counting'),
   screenTime: hasAccess('screenTime'),
   overlay: hasAccess('overlay'),
 });
+
+const same = (a: Access, b: Access) =>
+  a.counting === b.counting && a.screenTime === b.screenTime && a.overlay === b.overlay;
 
 /**
  * What Android currently allows, re-read every time the app comes back to the
@@ -26,9 +30,7 @@ export function useAccess(): Access & { recheck: () => void } {
   const recheck = useCallback(() => {
     setAccess((current) => {
       const next = read();
-      return current.screenTime === next.screenTime && current.overlay === next.overlay
-        ? current
-        : next;
+      return same(current, next) ? current : next;
     });
   }, []);
 
@@ -41,7 +43,11 @@ export function useAccess(): Access & { recheck: () => void } {
     return () => appState.remove();
   }, [recheck]);
 
-  /** Writes only when the account disagrees, so a resume usually costs nothing. */
+  /**
+   * Writes only when the account disagrees, so a resume usually costs nothing.
+   * Counting is not kept on the account: it is a device switch, and a phone
+   * without it should not report the one that has it.
+   */
   useEffect(() => {
     const profile = readProfile();
     const changed = {

@@ -54,8 +54,15 @@ export default function BattleScreen() {
   const [inviteFailed, setInviteFailed] = useState(false);
   const pickedRank = picked ? ranked.findIndex((entry) => entry.id === picked.id) + 1 : 0;
 
+  /**
+   * A podium needs someone to beat. On your own it is three plinths with two
+   * of them empty, announcing places nobody is standing in, so the board
+   * starts as plain rows until a friend turns up.
+   */
+  const podium = ranked.length > 1 ? ranked.slice(0, PodiumSize) : [];
+
   /** Every place on the board, taken or not, plus the one the plan opens. */
-  const listed = ranked.slice(PodiumSize);
+  const listed = ranked.slice(podium.length);
   const seats = Math.max(FreeFriendCap - ranked.filter((entry) => !entry.isMe).length, 0);
   const rows = listed.length + seats;
 
@@ -134,7 +141,7 @@ export default function BattleScreen() {
           </View>
         }>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Podium top={ranked.slice(0, PodiumSize)} onPick={setPicked} />
+          {podium.length > 0 ? <Podium top={podium} onPick={setPicked} /> : null}
 
           {/** Nothing cached and nothing fetched. The board is the one screen that needs the network. */}
           {failed && ranked.length === 0 ? (
@@ -153,7 +160,7 @@ export default function BattleScreen() {
               <RankRow
                 key={entry.id}
                 entry={entry}
-                rank={PodiumSize + index + 1}
+                rank={podium.length + index + 1}
                 onPress={() => setPicked(entry)}
               />
             ))}
@@ -161,7 +168,7 @@ export default function BattleScreen() {
             {Array.from({ length: seats }, (_, seat) => (
               <EmptyRow
                 key={`seat-${seat}`}
-                rank={PodiumSize + listed.length + seat + 1}
+                rank={podium.length + listed.length + seat + 1}
                 label={t(`battle.openSpot.${SeatPrompts[seat % SeatPrompts.length]}`)}
                 onPress={() => void invite()}
               />
@@ -169,7 +176,7 @@ export default function BattleScreen() {
 
             {/** The seat past the free five. It is here so the ceiling is visible. */}
             <EmptyRow
-              rank={PodiumSize + rows + 1}
+              rank={podium.length + rows + 1}
               locked
               last
               onPress={() => router.push('/paywall')}

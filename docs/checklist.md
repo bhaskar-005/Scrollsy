@@ -28,20 +28,20 @@ listed below so they are not lost.
 
 ## Needs you before anything can go live
 
-- [ ] Apply the migration to the project, `tcmrgqsbueqflsjrqzrv`. Its direct Postgres host has no IPv4 address, so either paste `supabase/migrations/20260915000000_init.sql` into the SQL editor, or use `npx supabase link` and `npx supabase db push`
+- [x] Migration applied to `tcmrgqsbueqflsjrqzrv`, through the IPv4 pooler in us-east-2, since the direct host has no IPv4 address. Was: Its direct Postgres host has no IPv4 address, so either paste `supabase/migrations/20260915000000_init.sql` into the SQL editor, or use `npx supabase link` and `npx supabase db push`
 - [ ] A Cloudflare account. Then `npm --prefix api run deploy` and `npm --prefix web run deploy`
 - [ ] The Supabase secret key, from Project Settings, API Keys, into `api/.dev.vars`. `SUPABASE_URL` is already filled in there. The publishable key is no longer used by anything: nothing but the Worker reaches the database
 - [ ] Worker secrets for production, `cd api && npx wrangler secret put NAME` for each: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `REVENUECAT_WEBHOOK_AUTH`, `REVENUECAT_API_KEY`. They must be Secrets, not plain Variables, or `wrangler deploy` refuses to run. `JWT_SECRET` is yours to invent, `openssl rand -hex 32`, and changing it later signs everyone out
-- [ ] The Worker's address in `.env.local` as `EXPO_PUBLIC_API_URL`, and in `web/wrangler.jsonc` as `API_URL`. `.env.local` and `api/.dev.vars` now exist with every line commented and explained, so filling them in is the whole job
+- [x] The Worker's address is set in both `.env` and `web/wrangler.jsonc`. Was `EXPO_PUBLIC_API_URL` in `.env.local` and `API_URL` in `web/wrangler.jsonc`. `.env.local` and `api/.dev.vars` now exist with every line commented and explained, so filling them in is the whole job
 - [ ] Google Cloud OAuth clients, one Web and one Android with the signing key's SHA-1. The Web client id goes in two places, both ours: `.env` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` and the Worker secret `GOOGLE_CLIENT_ID`. Supabase Auth is not involved and its Google provider can stay switched off, since the Worker verifies Google's token itself
 - [ ] RevenueCat project, Play products, an entitlement named `pro`, webhook pointed at `<worker>/v1/webhooks/revenuecat` with the Authorization value you set above
-- [ ] Real Terms and Privacy pages. `src/constants/legal.ts` still points at `example.com`, and a login screen with dead legal links gets rejected
+- [x] Real Terms and Privacy pages, served by `web/` at `/terms` and `/privacy`, with `src/constants/legal.ts` pointing at them through `EXPO_PUBLIC_SITE_URL`. The privacy page names the Accessibility Service and what it is for, which Play requires. Both are written from what the code actually does and still want a read by someone who knows the law where you are selling
 - [ ] Dollar prices for the monthly and yearly plans. The entry offer is settled, one rupee in India and one dollar elsewhere, but `Pricing.monthly` and `Pricing.yearly` are still rupees only
 - [ ] Check Play allows a one rupee introductory price in India. Play sets a minimum price per country and it may be above that
 - [ ] A domain for the website, if the `workers.dev` address should not be the invite link. It goes in `.env.local` as `EXPO_PUBLIC_SITE_URL`, which is what the share sheet hands out
 - [ ] The app's signing key SHA-256 fingerprints in `web/wrangler.jsonc`, plus the matching `intentFilters` in `app.json`, to make invite links open the app directly
 - [ ] Decide what period the leaderboard ranks. Built as today
-- [ ] Decide the Accessibility Service justification for Play. Counting reels has no other route
+- [x] Accessibility Service justification written, on the privacy page. The service is scoped to five packages and one event type, with `canRetrieveWindowContent="false"`, so the claim that it cannot read the screen is enforced by its own config rather than promised
 - [ ] A development build, `npx expo run:android` or EAS. Google sign in is native, so Expo Go cannot do it. The app itself still runs in Expo Go, the sign in button just reports that it is unavailable
 
 ---

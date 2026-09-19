@@ -1,0 +1,97 @@
+---
+/**
+ * The terms. Kept short and plain on purpose, because the login screen links
+ * here and nobody reads a wall.
+ */
+import Page from '../layouts/Page.astro';
+
+const updated = 'September 2026';
+---
+
+<Page
+  title="Terms of use"
+  description="The rules for using Scrollsy, in plain language."
+>
+  <h1 class="headline">Terms of use</h1>
+  <p class="fine">Last updated {updated}</p>
+
+  <div class="doc">
+    <h2>What Scrollsy is</h2>
+    <p>
+      Scrollsy counts the reels you scroll and shows you the number. It is a
+      counter, not medical advice, and not a treatment for anything.
+    </p>
+
+    <h2>Your account</h2>
+    <p>
+      You sign in with Google. You are responsible for that account. You need to
+      be old enough to agree to this, which in most places means thirteen, and
+      older where local law says so.
+    </p>
+
+    <h2>The free plan and the paid plan</h2>
+    <p>
+      The free plan counts. The paid plan adds the daily limit, the full history
+      and more friends. Prices are shown in the app before you buy, in your own
+      currency, and Google Play takes the payment.
+    </p>
+
+    <h2>Renewals and refunds</h2>
+    <p>
+      A subscription renews on its own until you cancel it. You cancel it in
+      Google Play, not here, and cancelling leaves the plan running until the
+      period you already paid for ends. Refunds are handled by Google Play under
+      their rules.
+    </p>
+
+    <h2>Fair use</h2>
+    <p>
+      Do not try to break the app, forge counts, or use someone else's account.
+      Battles are meant to be a laugh, and a made up number ruins the only thing
+      that makes them worth anything.
+    </p>
+
+    <h2>What we promise, and what we do not</h2>
+    <p>
+      The count is our best reading of what your phone reports. Android does not
+      hand out a perfect signal, so treat the number as a close measure rather
+      than an exact one. The app is provided as it is, without a guarantee that
+      it will always be available or always be right.
+    </p>
+
+    <h2>Ending it</h2>
+    <p>
+      You can delete your account at any time from Settings. We can close an
+      account that breaks these terms.
+    </p>
+
+    <h2>Changes</h2>
+    <p>
+      If these terms change in a way that matters, the app will say so rather
+      than quietly swapping the page.
+    </p>
+  </div>
+</Page>
+
+<style>
+  .doc {
+    width: 100%;
+    text-align: left;
+  }
+
+  .doc h2 {
+    margin: var(--space-5) 0 var(--space-2);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+  }
+
+  .doc p,
+  .doc li {
+    margin: 0 0 var(--space-2);
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 23px;
+    font-weight: 500;
+  }
+</style>

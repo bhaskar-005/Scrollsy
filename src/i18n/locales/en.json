@@ -52,6 +52,8 @@
       "headline": "Turn these on and we start counting.",
       "screenTimeTitle": "Screen time",
       "screenTimeBody": "So we can see your time in reels apps",
+      "countingTitle": "Reel counting",
+      "countingBody": "So we can count each reel as you scroll",
       "overlayTitle": "Display over other apps",
       "overlayBody": "So the counter can float while you scroll",
       "allow": "Allow",
@@ -60,6 +62,7 @@
       "next": "Continue",
       "whyHeadline": "These two are what make the count real",
       "whyScreenTime": "Screen time tells us how long you sat in the reels apps.",
+      "whyCounting": "Counting reels is the only way Android lets us see one go past. We count that it happened, nothing else.",
       "whyOverlay": "Display over other apps lets the count float while you scroll.",
       "whyPrivate": "We never read what you actually watched.",
       "whyRevoke": "You can turn either one off later in settings.",
@@ -197,6 +200,7 @@
       "dailyLimit": "Daily limit",
       "notifications": "Notifications",
       "screenTime": "Screen time",
+      "counting": "Reel counting",
       "darkMode": "Dark mode",
       "language": "Language",
       "feedback": "Send feedback",
@@ -260,6 +264,13 @@
       "caption": "Apps lock once you pass this. You can buy back 50 reels after that.",
       "reels": "{{reels}} reels",
       "save": "Save limit"
+    }
+  },
+  "notify": {
+    "limit": {
+      "channel": "Daily limit",
+      "title": "You are past your limit",
+      "body": "{{reels}} reels today. Your limit is {{limit}}."
     }
   }
 }

@@ -231,6 +231,13 @@ export default function SettingsScreen() {
                 onValueChange: (next) => void allowNotifications(next),
               }}
             />
+            {/** The one that makes the number move, so it reads first. */}
+            <SettingsRow
+              icon="activity"
+              label={t('settings.rows.counting')}
+              value={access.counting ? t('common.connected') : t('common.off')}
+              onPress={() => router.push('/onboarding/permission')}
+            />
             <SettingsRow
               icon="clock"
               label={t('settings.rows.screenTime')}

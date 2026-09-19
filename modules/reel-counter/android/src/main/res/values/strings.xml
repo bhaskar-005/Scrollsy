@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shown by Android itself, on the Accessibility settings page, so this is the
+  copy that has to convince someone mid tap. Same rules as the rest of the app.
+-->
+<resources>
+  <string name="reel_counter_service_label">Scrollsy reel counter</string>
+  <string name="reel_counter_service_description">Counts the reels you scroll in Instagram, TikTok, YouTube and Snapchat, and shows the number while you scroll. It reads nothing you watch.</string>
+</resources>

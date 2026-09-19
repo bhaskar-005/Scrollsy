@@ -9,6 +9,7 @@ export const AppNames: Record<AppKey, string> = {
   instagram: 'Instagram Reels',
   tiktok: 'TikTok',
   youtube: 'YouTube Shorts',
+  snapchat: 'Snapchat Spotlight',
 };
 
 export type AppUsage = { name: string; reels: number; icon: AppKey };

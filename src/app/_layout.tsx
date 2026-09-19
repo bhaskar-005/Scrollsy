@@ -7,13 +7,13 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-/** First, so a development build's local store is filled before any screen reads it. */
-import '@/lib/dev-seed';
 import { isSignedIn, subscribeAuth } from '@/lib/api';
+import { collectCounted } from '@/lib/counting';
 import { acceptPendingInvite } from '@/lib/invites';
 import { pullOnboardingProgress } from '@/lib/onboarding';
 import { clearProfile, readProfile, refreshProfile } from '@/lib/profile';
@@ -27,6 +27,21 @@ export default function RootLayout() {
 
   /** Pushes locally counted reels to the server for as long as the app is alive. */
   useEffect(() => startUsageSync(), []);
+
+  /**
+   * Collects whatever the counting service tallied while this app was closed,
+   * and again every time it comes back to the front. This is the only route
+   * those numbers take into the app, so it runs before anything reads them.
+   */
+  useEffect(() => {
+    void collectCounted();
+    const appState = AppState.addEventListener('change', (status) => {
+      if (status === 'active') {
+        void collectCounted();
+      }
+    });
+    return () => appState.remove();
+  }, []);
 
   /**
    * Catches up on a plan bought, renewed or cancelled somewhere else, so a

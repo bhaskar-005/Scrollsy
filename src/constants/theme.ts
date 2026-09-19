@@ -209,6 +209,7 @@ export const AppBrand = {
   instagram: ['#4F5BD5', '#962FBF', '#D62976', '#FA7E1E'] as const,
   tiktok: ['#101010', '#101010'] as const,
   youtube: ['#FF0000', '#FF0000'] as const,
+  snapchat: ['#FFFC00', '#FFFC00'] as const,
 } as const;
 
 export const Bevel = {

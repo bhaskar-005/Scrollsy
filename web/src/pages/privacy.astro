@@ -1,0 +1,128 @@
+---
+/**
+ * The privacy policy. Every claim here is one the code actually keeps, so this
+ * file and the app have to change together.
+ *
+ * Play requires a policy that names the Accessibility Service and says what it
+ * is for, because an app that uses one without explaining it is removed.
+ */
+import Page from '../layouts/Page.astro';
+
+const updated = 'September 2026';
+---
+
+<Page
+  title="Privacy policy"
+  description="What Scrollsy collects, what it never sees, and who else is involved."
+>
+  <h1 class="headline">Privacy policy</h1>
+  <p class="fine">Last updated {updated}</p>
+
+  <div class="doc">
+    <h2>The short version</h2>
+    <p>
+      Scrollsy counts how many reels you scroll. It counts that a reel went past.
+      It never sees what the reel was.
+    </p>
+
+    <h2>How the counting works</h2>
+    <p>
+      Android has no other way to know a reel went past, so Scrollsy uses an
+      Accessibility Service. It is limited to five apps, Instagram, TikTok,
+      YouTube, Snapchat and the TikTok international build, and it is allowed to
+      receive one kind of event, a scroll.
+    </p>
+    <p>
+      It cannot read the screen. The permission that would let it do that is
+      switched off in the service's own configuration, so no text, image, video,
+      caption, message or account name from those apps is ever available to
+      Scrollsy, even in memory.
+    </p>
+    <p>
+      What is recorded is a number, and which of the five apps it happened in.
+      Nothing else about the session is kept.
+    </p>
+
+    <h2>What Scrollsy stores about you</h2>
+    <ul>
+      <li>Your Google account id, name, email and profile photo, from signing in.</li>
+      <li>Your daily reel counts, per app, per day.</li>
+      <li>Which onboarding step you reached, so a new phone resumes where you stopped.</li>
+      <li>Who you are friends with, when you or they accept an invite.</li>
+      <li>Your settings, such as your daily limit and the counter style.</li>
+      <li>Whether you have a paid plan, and when it runs out.</li>
+      <li>Feedback you send, which is only what you typed and the topic you picked.</li>
+    </ul>
+
+    <h2>What Scrollsy never stores</h2>
+    <ul>
+      <li>Anything you watched, read, typed or sent in another app.</li>
+      <li>Your contacts, photos, location, microphone or camera.</li>
+      <li>Your card details. The store handles payment and Scrollsy never sees it.</li>
+    </ul>
+
+    <h2>Who else is involved</h2>
+    <p>
+      Google, for signing in. Supabase, which hosts the database. Cloudflare,
+      which runs the server the app talks to. RevenueCat and Google Play, for
+      subscriptions. Each one only receives what it needs to do its job.
+    </p>
+    <p>Scrollsy does not sell your data, and does not use it for advertising.</p>
+
+    <h2>Friends see very little</h2>
+    <p>
+      Someone you are in a battle with sees your name, your photo and your reel
+      count for the day. They never see your email, your settings, or anything
+      about which apps the count came from.
+    </p>
+
+    <h2>Turning it off</h2>
+    <p>
+      You can switch off reel counting, the floating counter, or notifications at
+      any time in Android settings, and the app keeps working without them. It
+      just stops counting.
+    </p>
+
+    <h2>Deleting everything</h2>
+    <p>
+      Settings has a delete account button. It removes your account, your counts,
+      your friendships and your feedback. It does not cancel a subscription,
+      because that lives with Google Play, and the app tells you so before you
+      confirm.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions about any of this can go to the feedback form inside the app,
+      under Settings.
+    </p>
+  </div>
+</Page>
+
+<style>
+  .doc {
+    width: 100%;
+    text-align: left;
+  }
+
+  .doc h2 {
+    margin: var(--space-5) 0 var(--space-2);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+  }
+
+  .doc p,
+  .doc li {
+    margin: 0 0 var(--space-2);
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 23px;
+    font-weight: 500;
+  }
+
+  .doc ul {
+    margin: 0 0 var(--space-2);
+    padding-left: var(--space-4);
+  }
+</style>

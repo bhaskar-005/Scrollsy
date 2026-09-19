@@ -58,6 +58,10 @@ async function purchases(): Promise<PurchasesModule | null> {
   }
   if (!started) {
     started = true;
+    if (__DEV__) {
+      /** Temporary. Prints the store's own reason when nothing is for sale. */
+      void loaded.default.setLogLevel(loaded.LOG_LEVEL.DEBUG);
+    }
     loaded.default.configure({ apiKey });
     /**
      * Fires on every change RevenueCat learns about, including a renewal or a
@@ -182,7 +186,17 @@ export async function loadOffers(): Promise<Offer[]> {
   try {
     const offering = (await module.default.getOfferings()).current;
     if (!offering) {
+      /** Temporary. No current offering set on the RevenueCat dashboard. */
+      if (__DEV__) console.log('offers: no current offering');
       return [];
+    }
+    if (__DEV__) {
+      /** Temporary. Package types have to be MONTHLY and ANNUAL to be read. */
+      console.log(
+        'offers:',
+        offering.identifier,
+        offering.availablePackages.map((p) => [p.identifier, p.packageType, p.product.priceString]),
+      );
     }
 
     packages.clear();
@@ -197,7 +211,9 @@ export async function loadOffers(): Promise<Offer[]> {
     }
     writeOffers(offers);
     return offers;
-  } catch {
+  } catch (error) {
+    /** Temporary. The store's own reason for having nothing to sell. */
+    if (__DEV__) console.log('offers failed:', error);
     return [];
   }
 }

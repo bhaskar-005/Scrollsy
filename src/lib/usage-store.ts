@@ -9,15 +9,13 @@ import * as SQLite from 'expo-sqlite';
  * `synced_reels` is how much of that total the server has confirmed, so what
  * is still waiting to upload is a subtraction, not a queue.
  *
- * The Android counting service will write to this same file and table
- * directly, because it has to keep counting while this JavaScript is not
- * running. That makes the schema below a contract with native code: change it
- * on both sides together.
+ * The Android counting service does not write here. It keeps counting while
+ * this JavaScript is not running, so it tallies on its own side and the app
+ * collects that into this table on the way back in, through `addCounted`.
+ * That keeps one writer for this file and no locking between two processes.
  */
 
-export type AppKey = 'instagram' | 'tiktok' | 'youtube';
-
-export type ReelCounts = Partial<Record<AppKey, number>>;
+export type AppKey = 'instagram' | 'tiktok' | 'youtube' | 'snapchat';
 
 export type DayTotal = { date: string; reels: number };
 
@@ -130,21 +128,31 @@ export async function readApps(from: string, to: string): Promise<AppTotal[]> {
   );
 }
 
-/** Adds counted reels to a day. Additive, like the server's `increment_usage`. */
-export async function addReels(counts: ReelCounts, date = localDateKey()): Promise<void> {
-  const entries = Object.entries(counts).filter(([, reels]) => (reels ?? 0) > 0);
-  if (entries.length === 0) {
+/** One day's worth of one app, as the counting service hands it over. */
+export type CountedRow = { date: string; app: AppKey; reels: number };
+
+/**
+ * Adds many days at once, in one transaction.
+ *
+ * A phone that counted all week without the app being opened hands back every
+ * day it slept through, and each one has to land on its own date rather than
+ * piling onto the day it was collected. Writing them together means one
+ * transaction and one redraw, however many days were missed.
+ */
+export async function addCounted(rows: CountedRow[]): Promise<void> {
+  const real = rows.filter((row) => row.reels > 0);
+  if (real.length === 0) {
     return;
   }
 
   await db.withTransactionAsync(async () => {
-    for (const [app, reels] of entries) {
+    for (const row of real) {
       await db.runAsync(
         `INSERT INTO usage (usage_date, app_key, total_reels) VALUES (?, ?, ?)
          ON CONFLICT (usage_date, app_key) DO UPDATE SET total_reels = total_reels + excluded.total_reels`,
-        date,
-        app,
-        reels ?? 0,
+        row.date,
+        row.app,
+        row.reels,
       );
     }
   });
@@ -232,26 +240,3 @@ export async function prune(): Promise<void> {
   await db.runAsync('DELETE FROM usage WHERE usage_date < ?', shiftDateKey(localDateKey(), -KeepDays));
 }
 
-/**
- * Writes rows that must never upload, for development only. Marked fully
- * synced on the way in, so a signed in dev build cannot push invented numbers
- * to a real project. Synchronous so it lands before the first screen reads.
- */
-export function seedSync(rows: { date: string; app: AppKey; reels: number }[]): void {
-  const empty = (db.getFirstSync<{ n: number }>('SELECT COUNT(*) AS n FROM usage')?.n ?? 0) === 0;
-  if (!empty) {
-    return;
-  }
-
-  db.withTransactionSync(() => {
-    for (const row of rows) {
-      db.runSync(
-        'INSERT INTO usage (usage_date, app_key, total_reels, synced_reels) VALUES (?, ?, ?, ?)',
-        row.date,
-        row.app,
-        row.reels,
-        row.reels,
-      );
-    }
-  });
-}

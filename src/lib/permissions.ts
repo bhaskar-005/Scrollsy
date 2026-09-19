@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import AppAccess from '@/modules/app-access/src/AppAccessModule';
+import ReelCounter from '@/modules/reel-counter/src/ReelCounterModule';
 
 /**
  * The permissions the counter needs, and the only file that knows how Android
@@ -15,7 +16,7 @@ import AppAccess from '@/modules/app-access/src/AppAccessModule';
  * tap as a yes. Notifications are a real prompt, so that one is asked outright.
  */
 
-export type AccessId = 'screenTime' | 'overlay';
+export type AccessId = 'screenTime' | 'overlay' | 'counting';
 
 const packageName = Constants.expoConfig?.android?.package;
 
@@ -23,6 +24,7 @@ const packageName = Constants.expoConfig?.android?.package;
 const Pages: Record<AccessId, IntentLauncher.ActivityAction> = {
   screenTime: IntentLauncher.ActivityAction.USAGE_ACCESS_SETTINGS,
   overlay: IntentLauncher.ActivityAction.MANAGE_OVERLAY_PERMISSION,
+  counting: IntentLauncher.ActivityAction.ACCESSIBILITY_SETTINGS,
 };
 
 /**
@@ -34,6 +36,9 @@ export const accessReadable = Platform.OS === 'android' && AppAccess !== null;
 
 /** What Android says right now. Cheap enough to call on every app resume. */
 export function hasAccess(id: AccessId): boolean {
+  if (id === 'counting') {
+    return ReelCounter?.isCounting() ?? false;
+  }
   if (!AppAccess) {
     return false;
   }

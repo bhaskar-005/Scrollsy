@@ -196,7 +196,7 @@ $$;
 create table public.daily_usage (
   user_id uuid not null references public.profiles (id) on delete cascade,
   usage_date date not null,
-  app_key text not null check (app_key in ('instagram', 'tiktok', 'youtube')),
+  app_key text not null check (app_key in ('instagram', 'tiktok', 'youtube', 'snapchat')),
   reels integer not null default 0 check (reels >= 0),
   -- Also serves every range query in the app: by person, by date, in either
   -- direction. No second index needed.
@@ -243,7 +243,7 @@ begin
     continue when day_date not between current_date - 30 and current_date + 1;
 
     for app in select key, value from jsonb_each(day -> 'apps') loop
-      continue when app.key not in ('instagram', 'tiktok', 'youtube');
+      continue when app.key not in ('instagram', 'tiktok', 'youtube', 'snapchat');
       continue when jsonb_typeof(app.value) <> 'number';
       continue when (app.value)::numeric <= 0;
 

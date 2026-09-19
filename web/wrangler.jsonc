@@ -10,7 +10,7 @@
   "services": [{ "binding": "API", "service": "doomless-api" }],
 
   "vars": {
-    "API_URL": "https://doomless-api.your-subdomain.workers.dev/v1",
+    "API_URL": "https://doomless-api.nordstudio.workers.dev/v1",
     "ANDROID_PACKAGE": "com.scrollsy.app",
     // The SHA-256 fingerprints of the app's signing keys, comma separated, for
     // Android App Links. Left empty, the App Links file lists nothing.

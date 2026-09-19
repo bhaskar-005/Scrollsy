@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Scoped as narrowly as Android allows.
+
+  Only scroll events, and only from the five packages that serve reels, so
+  nothing this app is not counting is ever delivered to it. No
+  `canRetrieveWindowContent`, so the service cannot read what is on screen even
+  if it wanted to, which is the claim the onboarding screen makes.
+-->
+<accessibility-service
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:accessibilityEventTypes="typeViewScrolled"
+  android:accessibilityFeedbackType="feedbackGeneric"
+  android:notificationTimeout="0"
+  android:canRetrieveWindowContent="false"
+  android:packageNames="com.instagram.android,com.zhiliaoapp.musically,com.ss.android.ugc.trill,com.google.android.youtube,com.snapchat.android"
+  android:description="@string/reel_counter_service_description" />
