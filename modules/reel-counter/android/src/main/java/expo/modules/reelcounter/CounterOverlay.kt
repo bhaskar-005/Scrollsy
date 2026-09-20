@@ -46,6 +46,7 @@ object CounterOverlay {
   /** What is currently on screen, so a changed setting rebuilds and nothing else does. */
   private var styleShown: String? = null
   private var stageShown: String? = null
+  private var totalShown = -1
 
   /** The live window position, kept here so a drag can move it without a lookup. */
   private var params: WindowManager.LayoutParams? = null
@@ -86,6 +87,19 @@ object CounterOverlay {
 
   fun show(context: Context, total: Int) {
     main.post {
+      /**
+       * Every scroll comes through here, not just every reel, because a scroll
+       * is what keeps the pill alive. Almost all of them find it already up
+       * showing the right number, so that case does nothing but push the
+       * retirement back rather than setting text and laying out sixty times a
+       * second under a flick.
+       */
+      if (pill != null && total == totalShown && ReelStore.style(context) == styleShown) {
+        main.removeCallbacks(retire)
+        main.postDelayed(retire, IdleMs)
+        return@post
+      }
+
       if (!allowed(context)) {
         return@post
       }
@@ -105,6 +119,7 @@ object CounterOverlay {
       }
 
       count?.text = total.toString()
+      totalShown = total
       if (stage != stageShown) {
         stageShown = stage
         face?.setImageBitmap(artFor(context, stage))
@@ -154,8 +169,9 @@ object CounterOverlay {
     var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
       WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
 
-    /** Real blur behind the glass, where Android can do it. */
-    if (style == "glass" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    /** Real blur behind the glass, on the phones that will actually give it. */
+    val lit = style == "glass" && blurred(context)
+    if (lit) {
       flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
     }
 
@@ -170,8 +186,8 @@ object CounterOverlay {
       gravity = Gravity.TOP or Gravity.START
       x = (metrics.widthPixels * ReelStore.positionX(context)).toInt() - dp(context, 56)
       y = (metrics.heightPixels * ReelStore.positionY(context)).toInt()
-      if (style == "glass" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        blurBehindRadius = dp(context, 12)
+      if (lit && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        blurBehindRadius = dp(context, 16)
       }
     }
 
@@ -308,16 +324,16 @@ object CounterOverlay {
 
     val art = ImageView(context).apply {
       setImageBitmap(artFor(context, stage))
-      layoutParams = LinearLayout.LayoutParams(dp(context, 22), dp(context, 22))
+      layoutParams = LinearLayout.LayoutParams(dp(context, 30), dp(context, 30))
     }
     face = art
     row.addView(art)
 
     val number = TextView(context).apply {
       text = total.toString()
-      setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+      setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
       typeface = android.graphics.Typeface.DEFAULT_BOLD
-      setPadding(dp(context, 6), 0, 0, 0)
+      setPadding(dp(context, 7), 0, 0, 0)
       setTextColor(textFor(style))
     }
     count = number
@@ -334,9 +350,9 @@ object CounterOverlay {
 
   /** The background, which is the only thing the style really decides. */
   private fun dress(context: Context, row: LinearLayout, style: String) {
-    val padX = dp(context, 12)
-    val padY = dp(context, 6)
-    val radius = dp(context, 20).toFloat()
+    val padX = dp(context, 14)
+    val padY = dp(context, 8)
+    val radius = dp(context, 24).toFloat()
 
     when (style) {
       "plain", "mascot" -> {
@@ -359,19 +375,33 @@ object CounterOverlay {
 
       "glass" -> {
         /**
-         * The window itself blurs what is behind it on Android 12 and up, so
-         * this is only the wet edge over the top of that. Older phones get the
-         * same shape with a heavier fill, since there is nothing to blur with.
+         * Liquid glass, built out of what a window can actually do.
+         *
+         * A real blur behind it is a bonus, not the effect, because most phones
+         * quietly refuse it: before Android 12 there is no such thing, and on
+         * phones that have it the whole feature is off under battery saver or
+         * when the person turned it off. Leaning on it left a white film nobody
+         * could see and a white number nobody could read.
+         *
+         * So the glass is drawn: light along the top edge where a curved
+         * surface would catch the light, darker at the bottom, a bright rim all
+         * the way round. That reads as glass over any reel on any phone, and
+         * where the blur does land it sits underneath and makes it better.
          */
-        val fill = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) "#38FFFFFF" else "#99202028"
+        val lit = blurred(context)
+        val top = if (lit) "#59FFFFFF" else "#7A4A4761"
+        val bottom = if (lit) "#26FFFFFF" else "#8C17151F"
+
         row.setPadding(padX, padY, padX, padY)
-        row.background = GradientDrawable().apply {
+        row.background = GradientDrawable(
+          GradientDrawable.Orientation.TOP_BOTTOM,
+          intArrayOf(Color.parseColor(top), Color.parseColor(bottom)),
+        ).apply {
           shape = GradientDrawable.RECTANGLE
           cornerRadius = radius
-          setColor(Color.parseColor(fill))
-          setStroke(dp(context, 1), Color.parseColor("#66FFFFFF"))
+          setStroke(dp(context, 1), Color.parseColor("#73FFFFFF"))
         }
-        count?.setShadowLayer(dp(context, 2).toFloat(), 0f, 1f, Color.parseColor("#80000000"))
+        count?.setShadowLayer(dp(context, 3).toFloat(), 0f, 1f, Color.parseColor("#B3000000"))
       }
 
       else -> {
@@ -383,6 +413,20 @@ object CounterOverlay {
         }
       }
     }
+  }
+
+  /**
+   * Whether this phone is really going to blur behind the window, which is a
+   * different question from whether it is new enough to know the word. It is
+   * off under battery saver, off when the person turned it off, and off on
+   * hardware that cannot afford it.
+   */
+  private fun blurred(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+      return false
+    }
+    val windows = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return false
+    return windows.isCrossWindowBlurEnabled
   }
 
   private fun stageFor(total: Int): String =
@@ -433,6 +477,7 @@ object CounterOverlay {
     face = null
     styleShown = null
     stageShown = null
+    totalShown = -1
   }
 
   private fun dp(context: Context, value: Int): Int =

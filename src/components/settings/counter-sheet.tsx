@@ -54,7 +54,7 @@ export function CounterSheet({ visible, onClose }: { visible: boolean; onClose: 
    * with him on it is what people come back to look at.
    */
   const preview = (option: CounterStyle) => {
-    const face = <Mascot stage={stageFor(reels)} width={20} />;
+    const face = <Mascot stage={stageFor(reels)} width={24} />;
 
     if (option === 'outline') {
       return (
@@ -169,7 +169,7 @@ const makeStyles = (c: Palette) =>
     },
     /** Fixed height, so five different previews do not stagger the row. */
     stagePreview: {
-      height: 34,
+      height: 40,
       alignItems: 'center',
       justifyContent: 'center',
     },
