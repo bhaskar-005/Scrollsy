@@ -1,15 +1,24 @@
 package expo.modules.reelcounter
 
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
@@ -17,18 +26,29 @@ import android.widget.TextView
  *
  * Drawn in native views rather than React, because it has to appear over
  * Instagram while this app is not running at all, and React Native has no
- * process at that point.
+ * process at that point. That is also why the style and the position are read
+ * from `ReelStore` instead of being passed in: nobody is alive to pass them.
  *
  * This runs on the scroll path, so it is written to do as little as possible
- * per reel: one text change, no allocation, no trip to the system server.
+ * per reel. One text change, no allocation, and the mascot decoded once per
+ * stage rather than once per reel.
+ *
+ * It takes touches now, so it can be dragged somewhere it is not in the way
+ * and tapped to open the board. That means it also swallows whatever tap lands
+ * on it, which is the price of both.
  */
 object CounterOverlay {
-  private var pill: TextView? = null
+  private var pill: View? = null
+  private var count: TextView? = null
+  private var face: ImageView? = null
   private val main = Handler(Looper.getMainLooper())
 
-  /** Where it sits, as a fraction of the screen. Matches the profile's default. */
-  private const val X = 0.86f
-  private const val Y = 0.08f
+  /** What is currently on screen, so a changed setting rebuilds and nothing else does. */
+  private var styleShown: String? = null
+  private var stageShown: String? = null
+
+  /** The live window position, kept here so a drag can move it without a lookup. */
+  private var params: WindowManager.LayoutParams? = null
 
   /**
    * Asking the system whether we may draw is a call into another process, and
@@ -40,12 +60,20 @@ object CounterOverlay {
   private const val RecheckMs = 30_000L
 
   /**
-   * The pill follows the scrolling, not the app. Left alone it would sit over
-   * the home screen for the rest of the day, holding a window open for
-   * nothing, so it takes itself away once the reels stop.
+   * The pill follows the scrolling, not the app. Leaving a reels app takes it
+   * away at once, but backgrounding the phone mid scroll does not, so this is
+   * the backstop that stops it holding a window open all day.
    */
   private const val IdleMs = 20_000L
   private val retire = Runnable { removeNow() }
+
+  /** Every hundred reels sinks him one stage. Matches `stageFor` in the app. */
+  private val Stages = listOf("fresh", "buzzed", "dizzy", "fried", "cooked")
+  private const val ReelsPerStage = 100
+
+  /** Decoded once per stage and kept, because a scroll must not touch the disk. */
+  private var faceArt: Bitmap? = null
+  private var faceArtStage: String? = null
 
   private fun allowed(context: Context): Boolean {
     val now = System.currentTimeMillis()
@@ -56,7 +84,7 @@ object CounterOverlay {
     return mayDraw
   }
 
-  fun show(context: Context, count: Int) {
+  fun show(context: Context, total: Int) {
     main.post {
       if (!allowed(context)) {
         return@post
@@ -64,11 +92,23 @@ object CounterOverlay {
 
       val windows = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return@post
 
-      if (pill == null && !attach(context, windows)) {
+      val style = ReelStore.style(context)
+      val stage = stageFor(total)
+
+      /** A style chosen since the last reel means the view on screen is the wrong one. */
+      if (pill != null && style != styleShown) {
+        removeNow()
+      }
+
+      if (pill == null && !attach(context, windows, style, stage, total)) {
         return@post
       }
 
-      pill?.text = count.toString()
+      count?.text = total.toString()
+      if (stage != stageShown) {
+        stageShown = stage
+        face?.setImageBitmap(artFor(context, stage))
+      }
 
       /** Each reel pushes the retirement back, so it only fires once you stop. */
       main.removeCallbacks(retire)
@@ -76,18 +116,29 @@ object CounterOverlay {
     }
   }
 
-  private fun attach(context: Context, windows: WindowManager): Boolean {
-    val view = TextView(context).apply {
-      setTextColor(Color.WHITE)
-      setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-      typeface = android.graphics.Typeface.DEFAULT_BOLD
-      setPadding(dp(context, 14), dp(context, 7), dp(context, 14), dp(context, 7))
-      background = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = dp(context, 20).toFloat()
-        setColor(Color.parseColor("#5B4BE8"))
+  /**
+   * Called when the style is chosen, so the change shows over Instagram on the
+   * next reel rather than whenever the pill happens to be rebuilt.
+   */
+  fun restyle(context: Context) {
+    main.post {
+      if (pill == null) {
+        return@post
       }
+      val total = ReelStore.total(context)
+      removeNow()
+      show(context, total)
     }
+  }
+
+  private fun attach(
+    context: Context,
+    windows: WindowManager,
+    style: String,
+    stage: String,
+    total: Int,
+  ): Boolean {
+    val view = build(context, style, stage, total)
 
     val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -96,31 +147,267 @@ object CounterOverlay {
       WindowManager.LayoutParams.TYPE_PHONE
     }
 
-    val params = WindowManager.LayoutParams(
+    /**
+     * Focusable would steal the keyboard from the app underneath. Touchable it
+     * has to be, or it can be neither dragged nor tapped.
+     */
+    var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+      WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+
+    /** Real blur behind the glass, where Android can do it. */
+    if (style == "glass" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+    }
+
+    val metrics = context.resources.displayMetrics
+    val layout = WindowManager.LayoutParams(
       WindowManager.LayoutParams.WRAP_CONTENT,
       WindowManager.LayoutParams.WRAP_CONTENT,
       type,
-      /** Never takes focus, so it cannot swallow a tap meant for the app underneath. */
-      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+      flags,
       android.graphics.PixelFormat.TRANSLUCENT,
     ).apply {
       gravity = Gravity.TOP or Gravity.START
-      val metrics = context.resources.displayMetrics
-      x = (metrics.widthPixels * X).toInt() - dp(context, 56)
-      y = (metrics.heightPixels * Y).toInt()
+      x = (metrics.widthPixels * ReelStore.positionX(context)).toInt() - dp(context, 56)
+      y = (metrics.heightPixels * ReelStore.positionY(context)).toInt()
+      if (style == "glass" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        blurBehindRadius = dp(context, 12)
+      }
     }
 
+    view.setOnTouchListener(dragger(context, windows))
+
     return try {
-      windows.addView(view, params)
+      windows.addView(view, layout)
       pill = view
+      params = layout
+      styleShown = style
+      stageShown = stage
       true
     } catch (error: Exception) {
       /** Permission pulled between the cached answer and here. Ask again sooner. */
       mayDrawCheckedAt = 0L
+      pill = null
+      params = null
       false
     }
+  }
+
+  /**
+   * Drag to move it, tap to open the board.
+   *
+   * The two are told apart the way Android tells them apart everywhere else:
+   * a finger that travelled less than the system's own slop was a tap, and
+   * anything further was a drag.
+   */
+  private fun dragger(context: Context, windows: WindowManager): View.OnTouchListener {
+    val slop = ViewConfiguration.get(context).scaledTouchSlop
+    var downX = 0f
+    var downY = 0f
+    var startX = 0
+    var startY = 0
+    var dragged = false
+
+    return View.OnTouchListener { view, event ->
+      val layout = params ?: return@OnTouchListener false
+
+      when (event.action) {
+        MotionEvent.ACTION_DOWN -> {
+          downX = event.rawX
+          downY = event.rawY
+          startX = layout.x
+          startY = layout.y
+          dragged = false
+          /** Nothing retires under a finger. */
+          main.removeCallbacks(retire)
+          true
+        }
+
+        MotionEvent.ACTION_MOVE -> {
+          val movedX = (event.rawX - downX).toInt()
+          val movedY = (event.rawY - downY).toInt()
+          if (!dragged && kotlin.math.abs(movedX) < slop && kotlin.math.abs(movedY) < slop) {
+            return@OnTouchListener true
+          }
+          dragged = true
+
+          /**
+           * Kept on screen. The floors are `coerceAtLeast(0)` rather than the
+           * bare difference because `coerceIn` throws when the low bound passes
+           * the high one, and a pill wider than the screen would do exactly
+           * that in the middle of a gesture.
+           */
+          val metrics = context.resources.displayMetrics
+          val farX = (metrics.widthPixels - view.width).coerceAtLeast(0)
+          val farY = (metrics.heightPixels - view.height).coerceAtLeast(0)
+          layout.x = (startX + movedX).coerceIn(0, farX)
+          layout.y = (startY + movedY).coerceIn(0, farY)
+          try {
+            windows.updateViewLayout(view, layout)
+          } catch (error: Exception) {
+            // The window went away mid drag. Nothing to move.
+          }
+          true
+        }
+
+        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+          if (dragged) {
+            remember(context, view, layout)
+          } else if (event.action == MotionEvent.ACTION_UP) {
+            openBoard(context)
+          }
+          main.postDelayed(retire, IdleMs)
+          true
+        }
+
+        else -> false
+      }
+    }
+  }
+
+  /**
+   * Where it was let go, as a fraction of the screen, so it lands in the same
+   * corner on a phone of another size. The app reads this back into the
+   * profile the next time it opens.
+   */
+  private fun remember(context: Context, view: View, layout: WindowManager.LayoutParams) {
+    val metrics = context.resources.displayMetrics
+    if (metrics.widthPixels == 0 || metrics.heightPixels == 0) {
+      return
+    }
+    val x = (layout.x + dp(context, 56)).toFloat() / metrics.widthPixels
+    val y = layout.y.toFloat() / metrics.heightPixels
+    ReelStore.setPosition(context, x.coerceIn(0f, 1f), y.coerceIn(0f, 1f))
+  }
+
+  /** Straight to the board, which is the only reason to tap a number mid scroll. */
+  private fun openBoard(context: Context) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("scrollsy://battle")).apply {
+      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    }
+    try {
+      context.startActivity(intent)
+    } catch (error: Exception) {
+      // No activity to take it, which only happens if the app is being removed.
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+   * The five looks
+   *
+   * He is in every one of them, because the number on its own is a statistic
+   * and the number with him on it is the thing people came back for. Only the
+   * chrome around the pair changes.
+   * ---------------------------------------------------------------------- */
+
+  private fun build(context: Context, style: String, stage: String, total: Int): View {
+    val row = LinearLayout(context).apply {
+      orientation = LinearLayout.HORIZONTAL
+      gravity = Gravity.CENTER_VERTICAL
+    }
+
+    val art = ImageView(context).apply {
+      setImageBitmap(artFor(context, stage))
+      layoutParams = LinearLayout.LayoutParams(dp(context, 22), dp(context, 22))
+    }
+    face = art
+    row.addView(art)
+
+    val number = TextView(context).apply {
+      text = total.toString()
+      setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+      typeface = android.graphics.Typeface.DEFAULT_BOLD
+      setPadding(dp(context, 6), 0, 0, 0)
+      setTextColor(textFor(style))
+    }
+    count = number
+    row.addView(number)
+
+    dress(context, row, style)
+    return row
+  }
+
+  private fun textFor(style: String): Int = when (style) {
+    "outline" -> Color.parseColor("#5B4BE8")
+    else -> Color.WHITE
+  }
+
+  /** The background, which is the only thing the style really decides. */
+  private fun dress(context: Context, row: LinearLayout, style: String) {
+    val padX = dp(context, 12)
+    val padY = dp(context, 6)
+    val radius = dp(context, 20).toFloat()
+
+    when (style) {
+      "plain", "mascot" -> {
+        /** No chrome at all. Him, the number, and whatever is behind them. */
+        row.setPadding(0, 0, 0, 0)
+        row.background = null
+        /** A white number on a bright reel needs its own edge to stay readable. */
+        count?.setShadowLayer(dp(context, 3).toFloat(), 0f, 1f, Color.BLACK)
+      }
+
+      "outline" -> {
+        row.setPadding(padX, padY, padX, padY)
+        row.background = GradientDrawable().apply {
+          shape = GradientDrawable.RECTANGLE
+          cornerRadius = radius
+          setColor(Color.TRANSPARENT)
+          setStroke(dp(context, 2), Color.parseColor("#5B4BE8"))
+        }
+      }
+
+      "glass" -> {
+        /**
+         * The window itself blurs what is behind it on Android 12 and up, so
+         * this is only the wet edge over the top of that. Older phones get the
+         * same shape with a heavier fill, since there is nothing to blur with.
+         */
+        val fill = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) "#38FFFFFF" else "#99202028"
+        row.setPadding(padX, padY, padX, padY)
+        row.background = GradientDrawable().apply {
+          shape = GradientDrawable.RECTANGLE
+          cornerRadius = radius
+          setColor(Color.parseColor(fill))
+          setStroke(dp(context, 1), Color.parseColor("#66FFFFFF"))
+        }
+        count?.setShadowLayer(dp(context, 2).toFloat(), 0f, 1f, Color.parseColor("#80000000"))
+      }
+
+      else -> {
+        row.setPadding(padX, padY, padX, padY)
+        row.background = GradientDrawable().apply {
+          shape = GradientDrawable.RECTANGLE
+          cornerRadius = radius
+          setColor(Color.parseColor("#5B4BE8"))
+        }
+      }
+    }
+  }
+
+  private fun stageFor(total: Int): String =
+    Stages[(total / ReelsPerStage).coerceIn(0, Stages.size - 1)]
+
+  /**
+   * His art at the size the pill needs it, decoded once per stage. The files
+   * are 512 squares and this draws them at 22dp, so they come back quartered
+   * rather than whole.
+   */
+  private fun artFor(context: Context, stage: String): Bitmap? {
+    if (faceArtStage == stage) {
+      faceArt?.let { return it }
+    }
+
+    val id = context.resources.getIdentifier("mascot_$stage", "drawable", context.packageName)
+    if (id == 0) {
+      return null
+    }
+
+    val options = BitmapFactory.Options().apply { inSampleSize = 4 }
+    val art = BitmapFactory.decodeResource(context.resources, id, options)
+    faceArt = art
+    faceArtStage = stage
+    return art
   }
 
   fun hide() {
@@ -141,6 +428,11 @@ object CounterOverlay {
       // Already gone, which is the state we wanted.
     }
     pill = null
+    params = null
+    count = null
+    face = null
+    styleShown = null
+    stageShown = null
   }
 
   private fun dp(context: Context, value: Int): Int =

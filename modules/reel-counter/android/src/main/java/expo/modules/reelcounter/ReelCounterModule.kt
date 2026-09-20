@@ -43,6 +43,26 @@ class ReelCounterModule : Module() {
       ReelStore.setTotal(context, total)
     }
 
+    /**
+     * How the pill should look. Left where the service will find it, because
+     * the service is what draws it and the app is not running by then. If the
+     * pill happens to be on screen right now, it changes under the choice.
+     */
+    Function("setStyle") { style: String ->
+      val context = appContext.reactContext ?: return@Function
+      ReelStore.setStyle(context, style)
+      CounterOverlay.restyle(context)
+    }
+
+    /**
+     * Where it was last dragged to, as a fraction of the screen, so the app
+     * can keep the profile in step with what the person actually did.
+     */
+    Function("position") {
+      val context = appContext.reactContext ?: return@Function null
+      mapOf("x" to ReelStore.positionX(context), "y" to ReelStore.positionY(context))
+    }
+
     /** Takes the pill off the screen, for turning the counter off. */
     Function("hideOverlay") {
       CounterOverlay.hide()

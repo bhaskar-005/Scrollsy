@@ -8,10 +8,10 @@ export const CounterStyles = ['pill', 'outline', 'glass', 'plain', 'mascot'] as 
 export type CounterStyle = (typeof CounterStyles)[number];
 
 /**
- * Where it sits over the screen, as a fraction of width and height. Nothing in
- * the app sets this now: the counter keeps the default corner, and the overlay
- * itself will be draggable once it exists, which is a better place to choose
- * than a drawing of a phone. The columns stay, so a choice made there persists.
+ * Where it sits over the screen, as a fraction of width and height. No screen
+ * in the app sets this: the pill is dragged where it is used, over the reels,
+ * which is a better place to choose than a drawing of a phone. The app reads
+ * back where it was left on the way in. See `counterPosition` in lib/counting.
  */
 export type CounterPosition = { x: number; y: number };
 

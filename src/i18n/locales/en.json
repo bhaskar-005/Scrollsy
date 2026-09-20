@@ -62,9 +62,9 @@
       "next": "Continue",
       "whyHeadline": "These two are what make the count real",
       "whyScreenTime": "Screen time tells us how long you sat in the reels apps.",
-      "whyCounting": "Counting reels is the only way Android lets us see one go past. We count that it happened, nothing else.",
+      "whyCounting": "Counting reels is the only way Android lets us see one go past. We check that the screen changed, so a resting thumb is not a reel.",
       "whyOverlay": "Display over other apps lets the count float while you scroll.",
-      "whyPrivate": "We never read what you actually watched.",
+      "whyPrivate": "Nothing we read to do that is saved, and none of it leaves your phone.",
       "whyRevoke": "You can turn either one off later in settings.",
       "whyConcerns": "Still not sure",
       "whyPolicy": "Read our policy"
@@ -217,10 +217,11 @@
       "styles": {
         "pill": "Pill",
         "outline": "Outline",
-        "glass": "Glass",
+        "glass": "Liquid glass",
         "plain": "Plain",
         "mascot": "Mascot"
       },
+      "dragHint": "Drag it anywhere while you scroll. Tap it to see the board.",
       "save": "Save counter"
     },
     "widgetSheet": {

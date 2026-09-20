@@ -31,6 +31,15 @@ object ReelStore {
   /** `total|<date>`, what the floating pill shows for that day. */
   private const val TOTAL = "total|"
 
+  /**
+   * How the pill looks and where it sits. Chosen in the app, drawn by a
+   * service that the app is not running alongside, so it is left here for the
+   * service to find rather than handed over.
+   */
+  private const val STYLE = "style"
+  private const val POSITION_X = "position|x"
+  private const val POSITION_Y = "position|y"
+
   /** The packages worth counting, and the name each one is stored under. */
   val Apps = mapOf(
     "com.instagram.android" to "instagram",
@@ -100,5 +109,32 @@ object ReelStore {
 
   fun setTotal(context: Context, total: Int) {
     prefs(context).edit().putInt("$TOTAL${today()}", total).apply()
+  }
+
+  /* ----------------------------------------------------------------------
+   * How the pill looks, and where
+   * ------------------------------------------------------------------- */
+
+  /** Matches `CounterStyles` in the app. Anything unknown falls back to the pill. */
+  fun style(context: Context): String = prefs(context).getString(STYLE, "pill") ?: "pill"
+
+  fun setStyle(context: Context, style: String) {
+    prefs(context).edit().putString(STYLE, style).apply()
+  }
+
+  /**
+   * Where it sits, as a fraction of the screen, so a position dragged on one
+   * screen size still makes sense on another. The default corner matches
+   * `DefaultProfile` in the app.
+   */
+  fun positionX(context: Context): Float = prefs(context).getFloat(POSITION_X, 0.86f)
+
+  fun positionY(context: Context): Float = prefs(context).getFloat(POSITION_Y, 0.08f)
+
+  fun setPosition(context: Context, x: Float, y: Float) {
+    prefs(context).edit()
+      .putFloat(POSITION_X, x)
+      .putFloat(POSITION_Y, y)
+      .apply()
   }
 }

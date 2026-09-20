@@ -9,6 +9,10 @@ class ReelCounterModule extends NativeModule<{}> {
     return [];
   }
   setTotal(): void {}
+  setStyle(): void {}
+  position(): { x: number; y: number } | null {
+    return null;
+  }
   hideOverlay(): void {}
 }
 

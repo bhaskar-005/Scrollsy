@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Scoped as narrowly as Android allows.
+  Reads what is on screen, because a scroll on its own cannot tell a real reel
+  from a nudge that snapped back. Both arrive as the same event. The service
+  waits for the screen to settle and asks what is showing, and only a screen
+  that changed is a reel that changed.
 
-  Only scroll events, and only from the five packages that serve reels, so
-  nothing this app is not counting is ever delivered to it. No
-  `canRetrieveWindowContent`, so the service cannot read what is on screen even
-  if it wanted to, which is the claim the onboarding screen makes.
+  Every app is in scope rather than five, because leaving Instagram is a window
+  change belonging to whatever you left it for, and the pill has to know to get
+  out of the way. Only the five packages in `ReelStore.Apps` are ever counted,
+  and nothing read is kept. See `fingerprint` in ReelCounterService.
 -->
 <accessibility-service
   xmlns:android="http://schemas.android.com/apk/res/android"
-  android:accessibilityEventTypes="typeViewScrolled"
+  android:accessibilityEventTypes="typeViewScrolled|typeWindowStateChanged"
   android:accessibilityFeedbackType="feedbackGeneric"
-  android:notificationTimeout="0"
-  android:canRetrieveWindowContent="false"
-  android:packageNames="com.instagram.android,com.zhiliaoapp.musically,com.ss.android.ugc.trill,com.google.android.youtube,com.snapchat.android"
+  android:notificationTimeout="100"
+  android:canRetrieveWindowContent="true"
   android:description="@string/reel_counter_service_description" />

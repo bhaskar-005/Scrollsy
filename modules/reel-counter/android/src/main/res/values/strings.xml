@@ -5,5 +5,5 @@
 -->
 <resources>
   <string name="reel_counter_service_label">Scrollsy reel counter</string>
-  <string name="reel_counter_service_description">Counts the reels you scroll in Instagram, TikTok, YouTube and Snapchat, and shows the number while you scroll. It reads nothing you watch.</string>
+  <string name="reel_counter_service_description">Counts the reels you scroll in Instagram, TikTok, YouTube and Snapchat, and shows the number while you scroll. It checks whether the screen changed so a resting thumb is not counted as a reel. Nothing it reads is saved or sent.</string>
 </resources>

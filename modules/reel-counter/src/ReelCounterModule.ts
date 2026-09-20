@@ -16,6 +16,16 @@ declare class ReelCounterModule extends NativeModule<{}> {
   drain(): CountedRow[];
   /** Puts the floating pill back in step with today's real total. */
   setTotal(total: number): void;
+  /**
+   * How the pill should look. One of `CounterStyles`.
+   *
+   * Optional for the same reason the module itself is: a build made before
+   * this function existed still runs this JavaScript, and calling something
+   * its native half has never heard of throws rather than doing nothing.
+   */
+  setStyle?(style: string): void;
+  /** Where it was last dragged to, as a fraction of the screen. Optional, as above. */
+  position?(): { x: number; y: number } | null;
   hideOverlay(): void;
 }
 

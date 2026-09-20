@@ -1,5 +1,7 @@
 import ReelCounter from '@/modules/reel-counter/src/ReelCounterModule';
+import type { CounterPosition, CounterStyle } from '@/constants/counter';
 import { notifyLimitCrossed } from '@/lib/notify';
+import { counterStyleOf, readProfile, setPreferences } from '@/lib/profile';
 import { toCountedRows } from '@/lib/counted-rows';
 import { addCounted, localDateKey, readDay } from '@/lib/usage-store';
 
@@ -45,11 +47,56 @@ export async function collectCounted(): Promise<void> {
   const today = await readDay(day);
   ReelCounter.setTotal(today);
 
+  syncLook();
+
   /** The only moment the app learns the count moved, so the only place to say so. */
   await notifyLimitCrossed(today);
+}
+
+/**
+ * Puts the pill and the profile back in step, both ways.
+ *
+ * The style travels out, because a profile pulled from the server on a new
+ * phone is a choice the service has never heard. The position travels back,
+ * because it is chosen by dragging the thing over Instagram and this is the
+ * first moment the app is running to hear about it.
+ */
+function syncLook(): void {
+  if (!ReelCounter) {
+    return;
+  }
+
+  const profile = readProfile();
+  ReelCounter.setStyle?.(counterStyleOf(profile));
+
+  const dragged = ReelCounter.position?.();
+  if (!dragged) {
+    return;
+  }
+  const held = profile.counterPosition;
+  if (dragged.x !== held.x || dragged.y !== held.y) {
+    setPreferences({ counterPosition: dragged });
+  }
 }
 
 /** Takes the pill off the screen, for turning counting off. */
 export function hideCounter(): void {
   ReelCounter?.hideOverlay();
+}
+
+/**
+ * Tells the service how the pill should look. The service draws it while this
+ * app is closed, so the choice has to be left somewhere it can find rather
+ * than held in a hook.
+ */
+export function setCounterStyle(style: CounterStyle): void {
+  ReelCounter?.setStyle?.(style);
+}
+
+/**
+ * Where the pill was last dragged to. The person moves it over Instagram, so
+ * the app only ever learns about it on the way back in.
+ */
+export function counterPosition(): CounterPosition | null {
+  return ReelCounter?.position?.() ?? null;
 }

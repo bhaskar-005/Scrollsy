@@ -21,25 +21,33 @@ const updated = 'September 2026';
   <div class="doc">
     <h2>The short version</h2>
     <p>
-      Scrollsy counts how many reels you scroll. It counts that a reel went past.
-      It never sees what the reel was.
+      Scrollsy counts how many reels you scroll. To tell one reel from the same
+      reel sitting still, it checks whether the screen changed. Nothing it reads
+      to do that is stored, and nothing about what you watched leaves your phone.
     </p>
 
     <h2>How the counting works</h2>
     <p>
       Android has no other way to know a reel went past, so Scrollsy uses an
-      Accessibility Service. It is limited to five apps, Instagram, TikTok,
-      YouTube, Snapchat and the TikTok international build, and it is allowed to
-      receive one kind of event, a scroll.
+      Accessibility Service. Only five apps are ever counted, Instagram, TikTok,
+      YouTube, Snapchat and the TikTok international build.
     </p>
     <p>
-      It cannot read the screen. The permission that would let it do that is
-      switched off in the service's own configuration, so no text, image, video,
-      caption, message or account name from those apps is ever available to
-      Scrollsy, even in memory.
+      A scroll on its own is not a reel. A thumb resting on the screen produces
+      the same event as a real one, which counted far more reels than anyone
+      actually watched. So when the screen stops moving, Scrollsy checks whether
+      it is still showing the same thing it was showing before. A screen that
+      changed means the feed moved on.
     </p>
     <p>
-      What is recorded is a number, and which of the five apps it happened in.
+      That check reads the labels the app puts on its own views, which can
+      include a caption or a handle. They are combined into a single number and
+      compared with the number from the reel before. The text is discarded in
+      the same step. The number cannot be turned back into what it came from, it
+      is never written to storage, and it never leaves your phone.
+    </p>
+    <p>
+      What is recorded is a count, and which of the five apps it happened in.
       Nothing else about the session is kept.
     </p>
 

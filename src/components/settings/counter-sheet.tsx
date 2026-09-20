@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Card, CountPill, PrimaryButton, Sheet } from '@/components/ui';
+import { PrimaryButton, Sheet } from '@/components/ui';
 import { Mascot } from '@/components/mascot';
 import { CounterStyles, type CounterStyle } from '@/constants/counter';
 import { stageFor } from '@/constants/stages';
@@ -10,6 +10,7 @@ import { Fonts, Radius, Spacing, type Palette } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { useTodayReels } from '@/hooks/use-today-reels';
+import { setCounterStyle } from '@/lib/counting';
 import { counterStyleOf, setPreferences } from '@/lib/profile';
 import { t } from '@/i18n';
 
@@ -42,30 +43,29 @@ export function CounterSheet({ visible, onClose }: { visible: boolean; onClose: 
 
   const save = () => {
     setPreferences({ counterStyle: style });
+    /** The service draws the pill, and it is not reading the profile. Tell it. */
+    setCounterStyle(style);
     onClose();
   };
 
-  /** Each option wearing today's real count, so the choice is the actual thing. */
+  /**
+   * Each option wearing today's real count, so the choice is the actual thing.
+   * He is in every one of them: the number alone is a statistic, and the number
+   * with him on it is what people come back to look at.
+   */
   const preview = (option: CounterStyle) => {
-    if (option === 'pill') {
-      return <CountPill count={reels} size="compact" />;
-    }
-    if (option === 'mascot') {
-      return (
-        <View style={styles.mascotPreview}>
-          <Mascot stage={stageFor(reels)} width={22} />
-          <Text style={styles.plain}>{reels}</Text>
-        </View>
-      );
-    }
+    const face = <Mascot stage={stageFor(reels)} width={20} />;
+
     if (option === 'outline') {
       return (
-        <View style={styles.outline}>
+        <View style={[styles.shell, styles.outline]}>
+          {face}
           <Text style={styles.outlineCount}>{reels}</Text>
         </View>
       );
     }
     if (option === 'glass') {
+      /** The real one blurs the reel behind it. This is the wet rim over the top. */
       return (
         <LinearGradient
           colors={[theme.glassRimBottom, theme.glassRimTop]}
@@ -76,13 +76,27 @@ export function CounterSheet({ visible, onClose }: { visible: boolean; onClose: 
             colors={[theme.glassBottom, theme.glassTop]}
             start={gradientStart}
             end={gradientEnd}
-            style={styles.glassFace}>
+            style={[styles.shell, styles.glassFace]}>
+            {face}
             <Text style={styles.plain}>{reels}</Text>
           </LinearGradient>
         </LinearGradient>
       );
     }
-    return <Text style={styles.plain}>{reels}</Text>;
+    if (option === 'plain' || option === 'mascot') {
+      return (
+        <View style={styles.shell}>
+          {face}
+          <Text style={styles.plain}>{reels}</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.shell, styles.pill]}>
+        {face}
+        <Text style={styles.pillCount}>{reels}</Text>
+      </View>
+    );
   };
 
   return (
@@ -93,17 +107,24 @@ export function CounterSheet({ visible, onClose }: { visible: boolean; onClose: 
         <Text style={styles.blockLabel}>{t('settings.counterSheet.styleLabel')}</Text>
         <View style={styles.styleRow}>
           {CounterStyles.map((option) => (
-            <Card
+            <Pressable
               key={option}
-              selected={style === option}
               onPress={() => setStyle(option)}
-              style={styles.styleCard}>
+              accessibilityRole="button"
+              accessibilityState={{ selected: style === option }}
+              style={styles.styleOption}>
               <View style={styles.stagePreview}>{preview(option)}</View>
-              <Text style={styles.styleName}>{t(`settings.counterSheet.styles.${option}`)}</Text>
-            </Card>
+              <Text style={[styles.styleName, style === option && styles.styleNameOn]}>
+                {t(`settings.counterSheet.styles.${option}`)}
+              </Text>
+              {/** The only mark of the choice, now that nothing is boxed. */}
+              <View style={[styles.underline, style === option && styles.underlineOn]} />
+            </Pressable>
           ))}
         </View>
       </View>
+
+      <Text style={styles.hint}>{t('settings.counterSheet.dragHint')}</Text>
 
       <PrimaryButton label={t('settings.counterSheet.save')} onPress={save} />
     </Sheet>
@@ -137,23 +158,23 @@ const makeStyles = (c: Palette) =>
       flexWrap: 'wrap',
       gap: Spacing.two,
     },
-    styleCard: {
-      /** Two and a bit per row, now that there are five to fit. */
+    styleOption: {
+      /** Two and a bit per row, for the five of them. */
       minWidth: 84,
       flexGrow: 1,
       flexBasis: '30%',
-      gap: Spacing.two,
+      gap: Spacing.one,
       alignItems: 'center',
-      paddingVertical: Spacing.three,
-      paddingHorizontal: Spacing.two,
+      paddingVertical: Spacing.two,
     },
-    /** Fixed height, so five different previews do not stagger the cards. */
+    /** Fixed height, so five different previews do not stagger the row. */
     stagePreview: {
       height: 34,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    mascotPreview: {
+    /** What every preview shares. Him on the left, the number beside him. */
+    shell: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.one,
@@ -164,8 +185,20 @@ const makeStyles = (c: Palette) =>
       fontFamily: Fonts.extraBold,
       fontWeight: '800',
     },
+    pill: {
+      paddingHorizontal: Spacing.two,
+      paddingVertical: Spacing.one,
+      borderRadius: Radius.pill,
+      backgroundColor: c.accent,
+    },
+    pillCount: {
+      color: c.onAccent,
+      fontSize: 17,
+      fontFamily: Fonts.extraBold,
+      fontWeight: '800',
+    },
     outline: {
-      paddingHorizontal: Spacing.three,
+      paddingHorizontal: Spacing.two,
       paddingVertical: Spacing.one,
       borderRadius: Radius.pill,
       borderWidth: 2,
@@ -182,7 +215,7 @@ const makeStyles = (c: Palette) =>
       borderRadius: Radius.pill,
     },
     glassFace: {
-      paddingHorizontal: Spacing.three,
+      paddingHorizontal: Spacing.two,
       paddingVertical: Spacing.one,
       borderRadius: Radius.pill - 1,
     },
@@ -191,5 +224,25 @@ const makeStyles = (c: Palette) =>
       fontSize: 13,
       fontFamily: Fonts.bold,
       fontWeight: '700',
+    },
+    styleNameOn: {
+      color: c.text,
+    },
+    underline: {
+      height: 2,
+      width: 20,
+      borderRadius: Radius.pill,
+      backgroundColor: 'transparent',
+    },
+    underlineOn: {
+      backgroundColor: c.accent,
+    },
+    hint: {
+      color: c.textFaint,
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: Fonts.medium,
+      fontWeight: '500',
+      textAlign: 'center',
     },
   });
