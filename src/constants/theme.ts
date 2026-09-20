@@ -69,8 +69,15 @@ export const Colors = {
     skyTop: '#BCA7F2',
     skyMid: '#D6CAF9',
     skyBottom: '#E9E1FC',
-    /** The faint arc nested in that sky. */
-    skyRing: 'rgba(76, 29, 149, 0.16)',
+    /**
+     * What separates the page's curve from the sky it rises into.
+     *
+     * Darker than the sky here, because the page is the pale thing and the
+     * shade of the sky's own violet is what gives it depth. Never black: a
+     * black smudge on a coloured ground reads as dirt on the glass.
+     */
+    skyLiftNear: 'rgba(76, 29, 149, 0.26)',
+    skyLiftFar: 'rgba(76, 29, 149, 0.18)',
     /** Specks drifting up through it. */
     star: 'rgba(255, 255, 255, 0.92)',
 
@@ -125,8 +132,14 @@ export const Colors = {
     skyTop: '#0B0715',
     skyMid: '#1B0F35',
     skyBottom: '#4C1D95',
-    /** The faint arc nested in that sky. */
-    skyRing: 'rgba(255, 255, 255, 0.10)',
+    /**
+     * Lighter than the sky here, which is the opposite of the light scheme and
+     * the whole point. The page is nearly black in the dark, so darkening the
+     * sky around it only buries the curve in what is already dark. Light
+     * gathering along the edge is what makes it stand out instead.
+     */
+    skyLiftNear: 'rgba(196, 174, 255, 0.50)',
+    skyLiftFar: 'rgba(139, 92, 246, 0.28)',
     /** Specks drifting up through it. */
     star: 'rgba(255, 255, 255, 0.85)',
 
@@ -265,6 +278,15 @@ export const Overlay = {
   glyph: '#FFFFFF',
   /** The grab pill where it lands on the plate rather than on the sheet. */
   grabber: 'rgba(24, 16, 48, 0.26)',
+  /**
+   * The mascot's speech bubble on Home, for the same reason as the plate
+   * above. It sits on the sky, and the sky is pale in the light scheme and
+   * nearly black in the dark one. A bubble that followed the scheme would be
+   * white on lavender one way and black on black the other, so it does not.
+   */
+  bubble: '#FFFFFF',
+  bubbleText: '#181030',
+  bubbleEdge: 'rgba(24, 16, 48, 0.12)',
 } as const;
 
 export const Fonts = {

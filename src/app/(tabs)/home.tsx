@@ -5,8 +5,9 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui';
+import { AppPills } from '@/components/app-pills';
 import { Backdrop } from '@/components/backdrop';
-import { MascotStage } from '@/components/mascot';
+import { MascotStage, Thought } from '@/components/mascot';
 import { ProUpsell } from '@/components/settings/pro-upsell';
 import { StarField } from '@/components/star-field';
 import { stageFor } from '@/constants/stages';
@@ -14,6 +15,7 @@ import { BottomTabInset, Fonts, MinTouch, Spacing, type Palette } from '@/consta
 import { useTheme } from '@/hooks/use-theme';
 import { usePremium } from '@/hooks/use-premium';
 import { useProfile } from '@/hooks/use-profile';
+import { useTodayApps } from '@/hooks/use-today-apps';
 import { useTodayReels } from '@/hooks/use-today-reels';
 import { t } from '@/i18n';
 
@@ -27,11 +29,6 @@ const DomeSpan = 2.4;
 /** How far his feet cross over onto the page he is standing on. */
 const DomeOverlap = Spacing.four;
 
-/** A second arc nested inside the first, so the sky rings him. */
-const RingGap = Spacing.six;
-
-const RingWeight = 1.5;
-
 export default function HomeScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -39,6 +36,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const reels = useTodayReels();
+  const apps = useTodayApps();
   const { profile } = useProfile();
   const premium = usePremium();
 
@@ -46,8 +44,6 @@ export default function HomeScreen() {
   const domeHeight = Math.max(height, domeRadius + Spacing.six);
   /** How far the curve has fallen away by the time it reaches the screen edge. */
   const arcDrop = domeRadius - Math.sqrt(Math.max(domeRadius ** 2 - (width / 2) ** 2, 0));
-  /** Same centre as the dome, one gap further out. */
-  const ringRadius = domeRadius + RingGap;
 
   return (
     <Backdrop glow={false}>
@@ -62,19 +58,6 @@ export default function HomeScreen() {
             style={[styles.sky, { top: -insets.top, bottom: -(arcDrop + Spacing.two) }]}>
             <StarField />
           </LinearGradient>
-
-          <View
-            style={[
-              styles.ring,
-              {
-                width: ringRadius * 2,
-                height: ringRadius * 2,
-                borderRadius: ringRadius,
-                marginLeft: -ringRadius,
-                bottom: -(domeRadius * 2 + RingGap - DomeOverlap),
-              },
-            ]}
-          />
 
           <View
             style={[
@@ -109,6 +92,8 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
+          <Thought stage={stageFor(reels)} reels={reels} />
+
           <MascotStage stage={stageFor(reels)} width={Math.min(width * 0.62, 280)} />
         </View>
 
@@ -116,6 +101,9 @@ export default function HomeScreen() {
           <Text style={styles.reels}>{reels}</Text>
           <Text style={styles.reelsLabel}>{t('home.reelsToday')}</Text>
         </View>
+
+        {/** Where the damage came from, under the number that totals it. */}
+        <AppPills apps={apps} />
 
         <ProUpsell />
       </View>
@@ -141,17 +129,28 @@ const makeStyles = (c: Palette) =>
       left: -Spacing.four,
       right: -Spacing.four,
     },
-    ring: {
-      position: 'absolute',
-      left: '50%',
-      borderWidth: RingWeight,
-      borderColor: c.skyRing,
-    },
-    /** The page itself, curving up into the sky. */
+    /**
+     * The page itself, curving up into the sky.
+     *
+     * Cast upward rather than down, because the page is the thing in front and
+     * the sky is behind it. Three passes: a hairline to seat the curve, a
+     * short one right under it, and a wide soft one that gives it real height
+     * off the sky.
+     *
+     * Whether that reads as a shadow or a glow is the palette's business, not
+     * this screen's. Light scheme darkens the sky around the curve, dark
+     * scheme lights it, because in the dark the page is the black thing and
+     * more darkness around it would only hide the edge. See `skyLift`.
+     */
     dome: {
       position: 'absolute',
       left: '50%',
       backgroundColor: c.background,
+      boxShadow: [
+        { offsetX: 0, offsetY: -1, blurRadius: 2, color: c.skyLiftNear },
+        { offsetX: 0, offsetY: -6, blurRadius: 14, color: c.skyLiftNear },
+        { offsetX: 0, offsetY: -20, blurRadius: 44, color: c.skyLiftFar },
+      ],
     },
     header: {
       flexDirection: 'row',
@@ -188,8 +187,8 @@ const makeStyles = (c: Palette) =>
     },
     reels: {
       color: c.text,
-      fontSize: 76,
-      lineHeight: 82,
+      fontSize: 64,
+      lineHeight: 70,
       fontFamily: Fonts.extraBold,
       fontWeight: '800',
       letterSpacing: -2,

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 
 import { db } from '../clients.ts';
 import { InviteCodePattern } from '../contract.ts';
@@ -6,6 +7,23 @@ import type { AppEnv } from '../env.ts';
 import { failure, rateLimited, requireUser } from '../http.ts';
 
 const notFound = { error: 'invite_invalid' } as const;
+
+/**
+ * The invite website is the one browser that calls this API, and it only ever
+ * calls the preview below. Cloudflare Pages runs no server code, so that page
+ * has to fetch the inviter's name from the browser itself, and a browser will
+ * not make that call without being told the origin is allowed.
+ *
+ * Named origins rather than `*`, and hung on the one public read rather than
+ * the router, so no signed in route ever answers a page it did not come from.
+ */
+const siteOrigins = ['https://scrollsy.pages.dev', 'http://localhost:4321'];
+
+const allowSite = cors({
+  origin: siteOrigins,
+  allowMethods: ['GET'],
+  maxAge: 86_400,
+});
 
 /** Sign in is required per route, not for the whole router, because the preview is public. */
 export const invites = new Hono<AppEnv>()
@@ -26,7 +44,7 @@ export const invites = new Hono<AppEnv>()
    * Cached briefly at the edge, so a link opened by a whole group chat at once
    * costs one database read, not one per person.
    */
-  .get('/:code', async (c) => {
+  .get('/:code', allowSite, async (c) => {
     const code = c.req.param('code');
     /** A malformed code cannot exist, so it never reaches the database. */
     if (!InviteCodePattern.test(code)) {

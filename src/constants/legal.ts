@@ -16,7 +16,7 @@ type ExternalUrl = `https://${string}`;
 const configured = process.env.EXPO_PUBLIC_SITE_URL;
 const site: ExternalUrl = configured?.startsWith('https://')
   ? (configured as ExternalUrl)
-  : 'https://scrollsy.app';
+  : 'https://scrollsy.pages.dev';
 
 export const Legal = {
   terms: `${site}/terms`,

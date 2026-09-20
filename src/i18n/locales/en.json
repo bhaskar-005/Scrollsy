@@ -128,7 +128,39 @@
     "nothingToRestore": "Nothing to restore on this account."
   },
   "home": {
-    "reelsToday": "reels seen today"
+    "reelsToday": "reels seen today",
+    "thoughts": {
+      "fresh": {
+        "a": "we are so locked in right now",
+        "b": "brain still fully operational",
+        "c": "zero damage. keep it that way",
+        "d": "look at us being normal"
+      },
+      "buzzed": {
+        "a": "ok that is a few too many",
+        "b": "i can feel it starting",
+        "c": "we said five minutes",
+        "d": "the algorithm is winning"
+      },
+      "dizzy": {
+        "a": "bro the room is spinning",
+        "b": "this is not a personality",
+        "c": "put it down. i am asking nicely",
+        "d": "we are deep in the sauce now"
+      },
+      "fried": {
+        "a": "go touch some grass",
+        "b": "my brain is buffering",
+        "c": "nothing you just watched was real",
+        "d": "this is a cry for help"
+      },
+      "cooked": {
+        "a": "bro you are cooked",
+        "b": "certified fried. no notes",
+        "c": "i have left my body",
+        "d": "lock it before i do"
+      }
+    }
   },
   "battle": {
     "title": "Scroll battle",
@@ -165,9 +197,6 @@
     }
   },
   "profile": {
-    "averageADay": "Average a day",
-    "bestDay": "Best day",
-    "worstStage": "Worst stage",
     "lastSevenDays": "Last 7 days",
     "limit": "limit {{reels}}"
   },
@@ -180,7 +209,6 @@
   },
   "settings": {
     "title": "Settings",
-    "signedIn": "Signed in with Google",
     "pro": {
       "lockCta": "Lock reels at {{price}}",
       "activeLabel": "Scrollsy member",
@@ -220,6 +248,12 @@
         "glass": "Liquid glass",
         "plain": "Plain",
         "mascot": "Mascot"
+      },
+      "sizeLabel": "Size",
+      "sizes": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
       },
       "dragHint": "Drag it anywhere while you scroll. Tap it to see the board.",
       "save": "Save counter"

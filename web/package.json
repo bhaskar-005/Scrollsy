@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "postbuild": "node scripts/for-pages.mjs",
     "check": "wrangler types && astro check && npm test && astro build && wrangler deploy --dry-run",
-    "deploy": "astro build && wrangler deploy",
+    "deploy": "astro build && wrangler pages deploy dist/client --project-name=scrollsy",
     "test": "node --test \"test/*.test.ts\"",
     "types": "wrangler types"
   },

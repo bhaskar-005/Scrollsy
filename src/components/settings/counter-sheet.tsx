@@ -4,14 +4,19 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton, Sheet } from '@/components/ui';
 import { Mascot } from '@/components/mascot';
-import { CounterStyles, type CounterStyle } from '@/constants/counter';
+import {
+  CounterSizes,
+  CounterStyles,
+  type CounterSize,
+  type CounterStyle,
+} from '@/constants/counter';
 import { stageFor } from '@/constants/stages';
 import { Fonts, Radius, Spacing, type Palette } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { useTodayReels } from '@/hooks/use-today-reels';
-import { setCounterStyle } from '@/lib/counting';
-import { counterStyleOf, setPreferences } from '@/lib/profile';
+import { setCounterSize, setCounterStyle } from '@/lib/counting';
+import { counterSizeOf, counterStyleOf, setPreferences } from '@/lib/profile';
 import { t } from '@/i18n';
 
 /** Gradients run bottom to top, same as the glass card on notifications. */
@@ -26,6 +31,7 @@ export function CounterSheet({ visible, onClose }: { visible: boolean; onClose: 
   const reels = useTodayReels();
 
   const [style, setStyle] = useState<CounterStyle>(() => counterStyleOf(profile));
+  const [size, setSize] = useState<CounterSize>(() => counterSizeOf(profile));
 
   /**
    * Opening starts from what is saved, so a sheet closed without saving does
@@ -38,13 +44,15 @@ export function CounterSheet({ visible, onClose }: { visible: boolean; onClose: 
     setWasOpen(visible);
     if (visible) {
       setStyle(counterStyleOf(profile));
+      setSize(counterSizeOf(profile));
     }
   }
 
   const save = () => {
-    setPreferences({ counterStyle: style });
+    setPreferences({ counterStyle: style, counterSize: size });
     /** The service draws the pill, and it is not reading the profile. Tell it. */
     setCounterStyle(style);
+    setCounterSize(size);
     onClose();
   };
 
@@ -119,6 +127,24 @@ export function CounterSheet({ visible, onClose }: { visible: boolean; onClose: 
               </Text>
               {/** The only mark of the choice, now that nothing is boxed. */}
               <View style={[styles.underline, style === option && styles.underlineOn]} />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.block}>
+        <Text style={styles.blockLabel}>{t('settings.counterSheet.sizeLabel')}</Text>
+        <View style={styles.sizeRow}>
+          {CounterSizes.map((option) => (
+            <Pressable
+              key={option}
+              onPress={() => setSize(option)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: size === option }}
+              style={[styles.sizeOption, size === option && styles.sizeOptionOn]}>
+              <Text style={[styles.sizeName, size === option && styles.sizeNameOn]}>
+                {t(`settings.counterSheet.sizes.${option}`)}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -218,6 +244,32 @@ const makeStyles = (c: Palette) =>
       paddingHorizontal: Spacing.two,
       paddingVertical: Spacing.one,
       borderRadius: Radius.pill - 1,
+    },
+    /** A segmented row, because three sizes are a spectrum rather than a menu. */
+    sizeRow: {
+      flexDirection: 'row',
+      gap: Spacing.one,
+      padding: Spacing.one,
+      borderRadius: Radius.pill,
+      backgroundColor: c.backgroundElement,
+    },
+    sizeOption: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: Spacing.two,
+      borderRadius: Radius.pill,
+    },
+    sizeOptionOn: {
+      backgroundColor: c.accentSoft,
+    },
+    sizeName: {
+      color: c.textSecondary,
+      fontSize: 14,
+      fontFamily: Fonts.bold,
+      fontWeight: '700',
+    },
+    sizeNameOn: {
+      color: c.accent,
     },
     styleName: {
       color: c.textSecondary,

@@ -37,6 +37,7 @@ object ReelStore {
    * service to find rather than handed over.
    */
   private const val STYLE = "style"
+  private const val SIZE = "size"
   private const val POSITION_X = "position|x"
   private const val POSITION_Y = "position|y"
 
@@ -120,6 +121,13 @@ object ReelStore {
 
   fun setStyle(context: Context, style: String) {
     prefs(context).edit().putString(STYLE, style).apply()
+  }
+
+  /** Matches `CounterSizes` in the app. Medium is the size it has always been. */
+  fun size(context: Context): String = prefs(context).getString(SIZE, "medium") ?: "medium"
+
+  fun setSize(context: Context, size: String) {
+    prefs(context).edit().putString(SIZE, size).apply()
   }
 
   /**

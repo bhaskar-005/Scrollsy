@@ -3,12 +3,16 @@ import cloudflare from '@astrojs/cloudflare';
 import { defineConfig } from 'astro/config';
 
 /**
- * The Scrollsy website. Pages are static by default, so the landing page ships
- * as plain files from Cloudflare's edge. Only routes that must look something
- * up per request opt out with `export const prerender = false`: the invite page
- * and Android's App Links file.
+ * The Scrollsy website. Every page is static, because it is served by
+ * Cloudflare Pages, which runs no server code. Anything that has to be looked
+ * up is looked up in the browser instead, see `pages/join.astro`.
+ *
+ * `site` is the deployed origin. Without it the build has no origin to resolve
+ * against and bakes `localhost` into every absolute URL, which is what a chat
+ * fetches when it draws a link preview.
  */
 export default defineConfig({
+  site: 'https://scrollsy.pages.dev',
   adapter: cloudflare({
     // The site's only image is a plain static file, so nothing needs Cloudflare
     // Images, and without this the adapter provisions that binding anyway.

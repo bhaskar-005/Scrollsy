@@ -54,6 +54,13 @@ class ReelCounterModule : Module() {
       CounterOverlay.restyle(context)
     }
 
+    /** How big it floats. Same reasoning as the style above. */
+    Function("setSize") { size: String ->
+      val context = appContext.reactContext ?: return@Function
+      ReelStore.setSize(context, size)
+      CounterOverlay.restyle(context)
+    }
+
     /**
      * Where it was last dragged to, as a fraction of the screen, so the app
      * can keep the profile in step with what the person actually did.

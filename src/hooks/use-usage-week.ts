@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { toAppUsage, type AppUsage } from '@/constants/apps';
-import { stageFor, type Stage } from '@/constants/stages';
 import { HistoryDays } from '@/lib/sync';
 import {
   localDateKey,
@@ -20,12 +19,6 @@ export type UsageWeek = {
   days: WeekDay[];
   apps: AppUsage[];
   total: number;
-  /** Rounded, across the whole window, empty days included. */
-  average: number;
-  /** The fewest in a day, because fewest is what winning looks like here. */
-  best: number;
-  /** How far the worst day of the week sank him. */
-  worstStage: Stage;
   /** The span being shown, as `Sep 10 to Sep 16`. */
   range: string;
 };
@@ -49,9 +42,6 @@ function fold(days: DayTotal[], apps: AppTotal[]): UsageWeek {
     days: days.map((day) => ({ ...day, label: dayLabel(day.date) })),
     apps: toAppUsage(apps),
     total,
-    average: days.length > 0 ? Math.round(total / days.length) : 0,
-    best: counts.length > 0 ? Math.min(...counts) : 0,
-    worstStage: stageFor(counts.length > 0 ? Math.max(...counts) : 0),
     range:
       days.length > 0 ? `${monthDay(days[0].date)} to ${monthDay(days[days.length - 1].date)}` : '',
   };

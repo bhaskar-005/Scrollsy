@@ -44,3 +44,15 @@ export function inviterFirstName(name: string | null | undefined): string | null
   const first = name?.trim().split(/\s+/)[0];
   return first ? first : null;
 }
+
+/**
+ * The code out of an invite URL's path.
+ *
+ * One static page answers for every invite, so the code never reaches a server
+ * and the page has to read it out of the address bar itself. Anything that is
+ * not a real code comes back empty rather than being passed on to the API.
+ */
+export function inviteCodeFromPath(pathname: string): string {
+  const found = pathname.match(/\/invite\/([^/?#]+)/)?.[1] ?? '';
+  return InviteCodePattern.test(found) ? found : '';
+}

@@ -31,8 +31,16 @@ export function stageFor(reels: number): Stage {
 }
 
 export const MascotArt: Record<MascotState, number> = {
-  fresh: require('@/assets/mascot/fresh.png'),
-  buzzed: require('@/assets/mascot/buzzed.png'),
+  /**
+   * Animated, as a blink. Two frames built from the open and closed art in
+   * `assets/mascot`, four seconds open and one and a half shut.
+   *
+   * Webp rather than gif, because a gif has no alpha channel at all and baked
+   * a white box in behind him. `expo-image` plays both, so this is only ever a
+   * question of which file the require points at.
+   */
+  fresh: require('@/assets/animate/fresh.webp'),
+  buzzed: require('@/assets/animate/buzzed.webp'),
   dizzy: require('@/assets/mascot/dizzy.png'),
   fried: require('@/assets/mascot/fried.png'),
   cooked: require('@/assets/mascot/cooked.png'),

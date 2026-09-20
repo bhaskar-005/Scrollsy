@@ -1,0 +1,124 @@
+---
+/**
+ * Where an invite link lands.
+ *
+ * One file answers for every code. Cloudflare Pages serves files and runs no
+ * server code, so there is no request to render against: `public/_redirects`
+ * rewrites every `/invite/<code>` to this page and the code is read out of the
+ * address bar in the browser.
+ *
+ * It sits at `/join` rather than under `/invite/` because Cloudflare refuses a
+ * rewrite whose destination matches its own source pattern, which `/invite/*`
+ * pointed at `/invite/index.html` does. The address someone was sent still
+ * reads `/invite/<code>`, since a 200 rewrite does not move the browser.
+ *
+ * The button is built from the code alone, so it works the moment the page
+ * paints and without the API being reachable at all. Who sent the invite is the
+ * only thing that has to be fetched, and it only changes the words.
+ *
+ * The cost of having no server is the link preview in a chat. A crawler runs no
+ * JavaScript, so the preview cannot carry the inviter's name and says something
+ * true for every invite instead.
+ */
+import { env } from 'cloudflare:workers';
+
+import Page from '../layouts/Page.astro';
+import { playStoreUrl } from '../lib/links';
+
+/** Read from the Worker config at build time, the same way the landing page reads it. */
+const apiUrl = env.API_URL;
+const androidPackage = env.ANDROID_PACKAGE;
+
+/** Where the button goes before the script has read the code. Always somewhere real. */
+const store = playStoreUrl(androidPackage);
+---
+
+<Page
+  title="Someone wants to battle you on Scrollsy"
+  description="Fewest reels scrolled today wins."
+  indexable={false}
+>
+  <p class="eyebrow">Scroll battle</p>
+  <h1 class="headline" data-headline>Someone wants to battle you.</h1>
+  <p class="caption" data-caption>Fewest reels scrolled today wins.</p>
+
+  <a class="primary" href={store} data-accept data-api={apiUrl} data-package={androidPackage}>
+    <span data-label>Get Scrollsy</span>
+  </a>
+
+  <p class="fine" data-note>Scrollsy is on Android for now.</p>
+</Page>
+
+<script>
+  import {
+    androidIntentUrl,
+    inviteCodeFromPath,
+    inviterFirstName,
+    isAndroid,
+    playStoreUrl,
+  } from '../lib/links';
+
+  const accept = document.querySelector<HTMLAnchorElement>('[data-accept]');
+  const headline = document.querySelector<HTMLElement>('[data-headline]');
+  const caption = document.querySelector<HTMLElement>('[data-caption]');
+  const label = document.querySelector<HTMLElement>('[data-label]');
+  const note = document.querySelector<HTMLElement>('[data-note]');
+
+  if (accept && headline && caption && label && note) {
+    const apiUrl = accept.dataset.api ?? '';
+    const androidPackage = accept.dataset.package ?? '';
+    const code = inviteCodeFromPath(location.pathname);
+
+    if (!code) {
+      /** Not a code at all, so there is nothing to accept and nothing to look up. */
+      headline.textContent = 'This invite has run out.';
+      caption.textContent = 'Ask for a fresh link, or start your own battle.';
+      accept.href = playStoreUrl(androidPackage);
+      label.textContent = 'Get Scrollsy';
+      note.textContent = '';
+    } else {
+      /**
+       * Everything the button needs is in the code, so this happens before any
+       * network call and stands whatever the API says afterwards. On Android
+       * one link does both jobs: it opens the app when it is installed, and
+       * goes to Play carrying the code when it is not.
+       */
+      const store = playStoreUrl(androidPackage, code);
+      const onAndroid = isAndroid(navigator.userAgent);
+
+      accept.href = onAndroid ? androidIntentUrl(androidPackage, code, store) : store;
+      label.textContent = onAndroid ? 'Accept the battle' : 'Get Scrollsy';
+      note.textContent = onAndroid
+        ? 'Opens Scrollsy, or gets it for you first.'
+        : 'Scrollsy is on Android for now.';
+
+      /**
+       * Who sent it, which is the only part worth waiting for. A failure leaves
+       * the page exactly as it is, because the button already works and a dead
+       * end here would cost the invite for nothing.
+       */
+      fetch(`${apiUrl}/invites/${code}`)
+        .then((response) => {
+          if (response.status === 404) {
+            headline.textContent = 'This invite has run out.';
+            caption.textContent = 'Ask for a fresh link, or start your own battle.';
+            accept.href = playStoreUrl(androidPackage);
+            label.textContent = 'Get Scrollsy';
+            note.textContent = '';
+            return null;
+          }
+          return response.ok ? (response.json() as Promise<{ name: string }>) : null;
+        })
+        .then((inviter) => {
+          const name = inviterFirstName(inviter?.name);
+          if (name) {
+            headline.textContent = `${name} wants to battle you.`;
+            document.title = `${name} wants to battle you on Scrollsy`;
+          }
+        })
+        .catch(() => {
+          // Offline, or the API is down. The generic page already works.
+        });
+    }
+  }
+</script>

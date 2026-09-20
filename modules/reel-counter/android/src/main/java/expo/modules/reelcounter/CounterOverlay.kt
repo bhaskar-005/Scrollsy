@@ -5,7 +5,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -45,6 +47,7 @@ object CounterOverlay {
 
   /** What is currently on screen, so a changed setting rebuilds and nothing else does. */
   private var styleShown: String? = null
+  private var sizeShown: String? = null
   private var stageShown: String? = null
   private var totalShown = -1
 
@@ -94,7 +97,11 @@ object CounterOverlay {
        * retirement back rather than setting text and laying out sixty times a
        * second under a flick.
        */
-      if (pill != null && total == totalShown && ReelStore.style(context) == styleShown) {
+      if (pill != null &&
+        total == totalShown &&
+        ReelStore.style(context) == styleShown &&
+        ReelStore.size(context) == sizeShown
+      ) {
         main.removeCallbacks(retire)
         main.postDelayed(retire, IdleMs)
         return@post
@@ -107,10 +114,11 @@ object CounterOverlay {
       val windows = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return@post
 
       val style = ReelStore.style(context)
+      val size = ReelStore.size(context)
       val stage = stageFor(total)
 
-      /** A style chosen since the last reel means the view on screen is the wrong one. */
-      if (pill != null && style != styleShown) {
+      /** A look chosen since the last reel means the view on screen is the wrong one. */
+      if (pill != null && (style != styleShown || size != sizeShown)) {
         removeNow()
       }
 
@@ -198,6 +206,7 @@ object CounterOverlay {
       pill = view
       params = layout
       styleShown = style
+      sizeShown = ReelStore.size(context)
       stageShown = stage
       true
     } catch (error: Exception) {
@@ -316,7 +325,20 @@ object CounterOverlay {
    * chrome around the pair changes.
    * ---------------------------------------------------------------------- */
 
+  /**
+   * How much bigger or smaller than the usual counter. Medium is 1, and every
+   * measurement in the pill is a multiple of it, so one number moves the art,
+   * the type and the padding together and the shape stays the shape.
+   */
+  private fun scaleOf(size: String): Float = when (size) {
+    "small" -> 0.78f
+    "large" -> 1.3f
+    else -> 1f
+  }
+
   private fun build(context: Context, style: String, stage: String, total: Int): View {
+    val scale = scaleOf(ReelStore.size(context))
+
     val row = LinearLayout(context).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
@@ -324,22 +346,23 @@ object CounterOverlay {
 
     val art = ImageView(context).apply {
       setImageBitmap(artFor(context, stage))
-      layoutParams = LinearLayout.LayoutParams(dp(context, 30), dp(context, 30))
+      val side = dp(context, 30, scale)
+      layoutParams = LinearLayout.LayoutParams(side, side)
     }
     face = art
     row.addView(art)
 
     val number = TextView(context).apply {
       text = total.toString()
-      setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
+      setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f * scale)
       typeface = android.graphics.Typeface.DEFAULT_BOLD
-      setPadding(dp(context, 7), 0, 0, 0)
+      setPadding(dp(context, 7, scale), 0, 0, 0)
       setTextColor(textFor(style))
     }
     count = number
     row.addView(number)
 
-    dress(context, row, style)
+    dress(context, row, style, scale)
     return row
   }
 
@@ -349,10 +372,10 @@ object CounterOverlay {
   }
 
   /** The background, which is the only thing the style really decides. */
-  private fun dress(context: Context, row: LinearLayout, style: String) {
-    val padX = dp(context, 14)
-    val padY = dp(context, 8)
-    val radius = dp(context, 24).toFloat()
+  private fun dress(context: Context, row: LinearLayout, style: String, scale: Float) {
+    val padX = dp(context, 14, scale)
+    val padY = dp(context, 8, scale)
+    val radius = dp(context, 24, scale).toFloat()
 
     when (style) {
       "plain", "mascot" -> {
@@ -393,25 +416,62 @@ object CounterOverlay {
         val bottom = if (lit) "#26FFFFFF" else "#8C17151F"
 
         row.setPadding(padX, padY, padX, padY)
-        row.background = GradientDrawable(
-          GradientDrawable.Orientation.TOP_BOTTOM,
-          intArrayOf(Color.parseColor(top), Color.parseColor(bottom)),
-        ).apply {
-          shape = GradientDrawable.RECTANGLE
-          cornerRadius = radius
-          setStroke(dp(context, 1), Color.parseColor("#73FFFFFF"))
-        }
+        row.background = beveled(
+          context,
+          GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Color.parseColor(top), Color.parseColor(bottom)),
+          ).apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius
+          },
+          radius,
+        )
         count?.setShadowLayer(dp(context, 3).toFloat(), 0f, 1f, Color.parseColor("#B3000000"))
       }
 
       else -> {
+        /** The violet runs a shade lighter at the top, same as the app's button. */
         row.setPadding(padX, padY, padX, padY)
-        row.background = GradientDrawable().apply {
-          shape = GradientDrawable.RECTANGLE
-          cornerRadius = radius
-          setColor(Color.parseColor("#5B4BE8"))
-        }
+        row.background = beveled(
+          context,
+          GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Color.parseColor("#6D5BF0"), Color.parseColor("#4F3ED6")),
+          ).apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius
+          },
+          radius,
+        )
+        count?.setShadowLayer(dp(context, 2).toFloat(), 0f, 1f, Color.parseColor("#73000000"))
       }
+    }
+  }
+
+  /**
+   * A face with a lit top edge and a shaded bottom one, which is the same
+   * bevel the primary button in the app wears and the reason it reads as a
+   * raised object rather than a coloured rectangle.
+   *
+   * A stroke would draw the line all the way round, and a line all the way
+   * round is an outline, not depth. Light has to come from somewhere. So the
+   * rim underneath runs light at the top to dark at the bottom, and the face
+   * sits on it inset by a hair, leaving the lit edge above and the shadow
+   * below with nothing showing down the sides.
+   */
+  private fun beveled(context: Context, face: GradientDrawable, radius: Float): Drawable {
+    val rim = GradientDrawable(
+      GradientDrawable.Orientation.TOP_BOTTOM,
+      intArrayOf(Color.parseColor("#66FFFFFF"), Color.parseColor("#59000000")),
+    ).apply {
+      shape = GradientDrawable.RECTANGLE
+      cornerRadius = radius
+    }
+
+    val edge = dp(context, 1).coerceAtLeast(1)
+    return LayerDrawable(arrayOf(rim, face)).apply {
+      setLayerInset(1, 0, edge, 0, edge)
     }
   }
 
@@ -476,10 +536,11 @@ object CounterOverlay {
     count = null
     face = null
     styleShown = null
+    sizeShown = null
     stageShown = null
     totalShown = -1
   }
 
-  private fun dp(context: Context, value: Int): Int =
-    (value * context.resources.displayMetrics.density).toInt()
+  private fun dp(context: Context, value: Int, scale: Float = 1f): Int =
+    (value * scale * context.resources.displayMetrics.density).toInt()
 }

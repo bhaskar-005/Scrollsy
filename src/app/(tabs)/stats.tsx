@@ -83,12 +83,13 @@ export default function StatsScreen() {
             </View>
           </View>
 
-          {/** Free plan only sees this week. Full history is what the plan is for. */}
-          <ProUpsell />
-
-          <StatsPanel week={week} dailyLimit={profile.dailyLimit} />
+          {/** The chart is what the screen is for, so nothing sits above it. */}
+          <StatsPanel week={week} dailyLimit={premium ? profile.dailyLimit : null} />
 
           <StatTile value={week.total} label={t('stats.totalReels')} />
+
+          {/** Straight under the week's total, which is where the offer reads hardest. */}
+          <ProUpsell />
 
           <AppBreakdownCard title={t('stats.appsThisWeek')} apps={week.apps} />
         </ScrollView>

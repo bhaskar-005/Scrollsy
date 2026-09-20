@@ -1,6 +1,12 @@
 import 'expo-sqlite/localStorage/install';
 
-import { isCounterStyle, type CounterPosition, type CounterStyle } from '@/constants/counter';
+import {
+  isCounterSize,
+  isCounterStyle,
+  type CounterPosition,
+  type CounterSize,
+  type CounterStyle,
+} from '@/constants/counter';
 import { ApiError, api, apiConfigured, isSignedIn } from '@/lib/api';
 
 /**
@@ -20,6 +26,7 @@ export type Profile = {
   avatarUrl: string | null;
   dailyLimit: number;
   counterStyle: CounterStyle;
+  counterSize: CounterSize;
   counterPosition: CounterPosition;
   notificationsEnabled: boolean;
   screenTimeGranted: boolean;
@@ -33,6 +40,7 @@ export type Preferences = Pick<
   Profile,
   | 'dailyLimit'
   | 'counterStyle'
+  | 'counterSize'
   | 'counterPosition'
   | 'notificationsEnabled'
   | 'screenTimeGranted'
@@ -51,6 +59,7 @@ export const DefaultProfile: Profile = {
   avatarUrl: null,
   dailyLimit: 400,
   counterStyle: 'pill',
+  counterSize: 'medium',
   counterPosition: { x: 0.86, y: 0.08 },
   notificationsEnabled: false,
   screenTimeGranted: false,
@@ -136,6 +145,7 @@ function withUnsent(remote: Profile, local: Profile, unsent: Patch): Profile {
     ...remote,
     ...(held('dailyLimit') ? { dailyLimit: local.dailyLimit } : {}),
     ...(held('counterStyle') ? { counterStyle: local.counterStyle } : {}),
+    ...(held('counterSize') ? { counterSize: local.counterSize } : {}),
     ...(held('counterPositionX') || held('counterPositionY')
       ? { counterPosition: local.counterPosition }
       : {}),
@@ -259,4 +269,9 @@ export async function flushPreferences(): Promise<void> {
 /** Narrows a stored style, so an old cache or a new server value cannot break the picker. */
 export function counterStyleOf(profile: Profile): CounterStyle {
   return isCounterStyle(profile.counterStyle) ? profile.counterStyle : DefaultProfile.counterStyle;
+}
+
+/** Narrows a stored size the same way, so an account made before it existed still draws. */
+export function counterSizeOf(profile: Profile): CounterSize {
+  return isCounterSize(profile.counterSize) ? profile.counterSize : DefaultProfile.counterSize;
 }

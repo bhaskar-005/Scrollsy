@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { androidIntentUrl, inviterFirstName, isAndroid, playStoreUrl } from '../src/lib/links.ts';
+import {
+  androidIntentUrl,
+  inviteCodeFromPath,
+  inviterFirstName,
+  isAndroid,
+  playStoreUrl,
+} from '../src/lib/links.ts';
 
 test('the Play link carries the invite code as the install referrer', () => {
   const url = new URL(playStoreUrl('com.scrollsy.app', '0123456789ab'));
@@ -41,4 +47,15 @@ test('the page greets by first name, and never with a blank', () => {
   assert.equal(inviterFirstName(''), null);
   assert.equal(inviterFirstName('   '), null);
   assert.equal(inviterFirstName(null), null);
+});
+
+test('the code is read out of an invite path, and nothing else is', () => {
+  assert.equal(inviteCodeFromPath('/invite/0123456789ab'), '0123456789ab');
+  assert.equal(inviteCodeFromPath('/invite/0123456789ab/'), '0123456789ab');
+  assert.equal(inviteCodeFromPath('/invite/0123456789ab?from=chat'), '0123456789ab');
+  // Not codes, so they never reach the API.
+  assert.equal(inviteCodeFromPath('/invite/'), '');
+  assert.equal(inviteCodeFromPath('/invite/NOTAHEXCODE'), '');
+  assert.equal(inviteCodeFromPath('/invite/0123456789abcdef'), '');
+  assert.equal(inviteCodeFromPath('/terms'), '');
 });

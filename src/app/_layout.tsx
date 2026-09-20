@@ -10,11 +10,11 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { Fonts } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { isSignedIn, subscribeAuth } from '@/lib/api';
 import { collectCounted } from '@/lib/counting';
-import { acceptPendingInvite } from '@/lib/invites';
+import { acceptPendingInvite, claimInstallReferrer } from '@/lib/invites';
 import { pullOnboardingProgress } from '@/lib/onboarding';
 import { clearProfile, readProfile, refreshProfile } from '@/lib/profile';
 import { forgetCustomer, identifyCustomer, startPurchases } from '@/lib/purchases';
@@ -24,6 +24,8 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  /** The app's own page colour, for the card underneath a sliding screen. */
+  const page = (colorScheme === 'dark' ? Colors.dark : Colors.light).background;
 
   /** Pushes locally counted reels to the server for as long as the app is alive. */
   useEffect(() => startUsageSync(), []);
@@ -59,8 +61,13 @@ export default function RootLayout() {
   /** Picks up onboarding progress made on another phone, and any waiting invite. */
   useEffect(() => {
     void pullOnboardingProgress();
-    /** An invite from a link waits here until there is an account to accept it with. */
-    void acceptPendingInvite();
+    /**
+     * An invite from a link waits here until there is an account to accept it
+     * with. Someone who installed from Play has no link to have opened, so the
+     * code is claimed off the install referrer first and then waits the same
+     * way, which is what puts them in the inviter's battle once they sign in.
+     */
+    void claimInstallReferrer().then(acceptPendingInvite);
   }, []);
 
   /**
@@ -107,7 +114,18 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          /**
+           * What sits under a screen while it slides. Without this the card
+           * falls back to the navigator's own background, which is almost
+           * black, and every gap a screen does not paint itself shows it for
+           * the length of the animation. Screens draw their own backdrop over
+           * this, so it is only ever seen mid transition.
+           */
+          contentStyle: { backgroundColor: page },
+        }}>
         <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
       </Stack>
     </ThemeProvider>

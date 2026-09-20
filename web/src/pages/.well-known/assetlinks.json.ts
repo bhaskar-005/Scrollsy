@@ -3,10 +3,12 @@
  * directly, skipping the browser, once the app declares this domain in
  * app.json. Lists nothing until the signing key fingerprints are configured,
  * which leaves links opening this site as normal.
+ *
+ * Built as a file rather than answered per request, because Cloudflare Pages
+ * serves files and nothing else. The fingerprints are read from the Worker
+ * config at build time, so changing them means building again.
  */
 import { env } from 'cloudflare:workers';
-
-export const prerender = false;
 
 export function GET() {
   const fingerprints = env.ANDROID_SHA256_FINGERPRINTS.split(',')

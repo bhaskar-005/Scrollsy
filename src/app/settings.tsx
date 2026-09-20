@@ -167,7 +167,6 @@ export default function SettingsScreen() {
                     {profile.email}
                   </Text>
                 ) : null}
-                <Text style={styles.provider}>{t('settings.signedIn')}</Text>
               </View>
             </View>
           ) : (
@@ -408,12 +407,6 @@ const makeStyles = (c: Palette) =>
       fontSize: 14,
       fontFamily: Fonts.medium,
       fontWeight: '500',
-    },
-    provider: {
-      color: c.textFaint,
-      fontSize: 12,
-      fontFamily: Fonts.semiBold,
-      fontWeight: '600',
     },
     pressed: {
       opacity: 0.75,

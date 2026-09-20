@@ -1,0 +1,11 @@
+# Every invite code is served by the one built page at /join, which reads the
+# code out of the address bar. A 200 rewrite rather than a redirect, so the code
+# stays in the URL for the page to find and the link someone was sent is the
+# link they stay on.
+#
+# The destination has to sit outside /invite/, or Cloudflare reads the rule as
+# pointing at itself and drops it.
+#
+# Without this, Cloudflare Pages has no file at /invite/<code> and falls back to
+# the landing page, which is the generic Get Scrollsy button with no invite in it.
+/invite/* /join/ 200

@@ -110,6 +110,7 @@ export function historyAllowed(from: string, premium: boolean, today: string): b
 const PreferenceColumns = {
   dailyLimit: 'daily_limit',
   counterStyle: 'counter_style',
+  counterSize: 'counter_size',
   counterPositionX: 'counter_position_x',
   counterPositionY: 'counter_position_y',
   notificationsEnabled: 'notifications_enabled',
@@ -142,7 +143,8 @@ export function toPreferencePatch(body: unknown): Record<string, unknown> | null
 
 /** Exactly the columns `GET /me` reads. Never `select *`. */
 export const ProfileColumns =
-  'id, display_name, avatar_url, email, daily_limit, counter_style, counter_position_x, counter_position_y, ' +
+  'id, display_name, avatar_url, email, daily_limit, counter_style, counter_size, ' +
+  'counter_position_x, counter_position_y, ' +
   'notifications_enabled, screen_time_granted, overlay_granted, ' +
   'premium, subscription_status, subscription_expires_at';
 
@@ -153,6 +155,7 @@ export type ProfileRow = {
   email: string | null;
   daily_limit: number;
   counter_style: string;
+  counter_size: string;
   counter_position_x: number;
   counter_position_y: number;
   notifications_enabled: boolean;
@@ -171,6 +174,7 @@ export function toProfile(row: ProfileRow) {
     avatarUrl: row.avatar_url,
     dailyLimit: row.daily_limit,
     counterStyle: row.counter_style,
+    counterSize: row.counter_size,
     counterPosition: { x: row.counter_position_x, y: row.counter_position_y },
     notificationsEnabled: row.notifications_enabled,
     screenTimeGranted: row.screen_time_granted,

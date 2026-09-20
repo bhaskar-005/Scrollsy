@@ -24,6 +24,8 @@ declare class ReelCounterModule extends NativeModule<{}> {
    * its native half has never heard of throws rather than doing nothing.
    */
   setStyle?(style: string): void;
+  /** How big the pill floats. One of `CounterSizes`. Optional, as above. */
+  setSize?(size: string): void;
   /** Where it was last dragged to, as a fraction of the screen. Optional, as above. */
   position?(): { x: number; y: number } | null;
   hideOverlay(): void;

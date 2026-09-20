@@ -1,7 +1,7 @@
 import ReelCounter from '@/modules/reel-counter/src/ReelCounterModule';
-import type { CounterPosition, CounterStyle } from '@/constants/counter';
+import type { CounterPosition, CounterSize, CounterStyle } from '@/constants/counter';
 import { notifyLimitCrossed } from '@/lib/notify';
-import { counterStyleOf, readProfile, setPreferences } from '@/lib/profile';
+import { counterSizeOf, counterStyleOf, readProfile, setPreferences } from '@/lib/profile';
 import { toCountedRows } from '@/lib/counted-rows';
 import { addCounted, localDateKey, readDay } from '@/lib/usage-store';
 
@@ -68,6 +68,7 @@ function syncLook(): void {
 
   const profile = readProfile();
   ReelCounter.setStyle?.(counterStyleOf(profile));
+  ReelCounter.setSize?.(counterSizeOf(profile));
 
   const dragged = ReelCounter.position?.();
   if (!dragged) {
@@ -91,6 +92,11 @@ export function hideCounter(): void {
  */
 export function setCounterStyle(style: CounterStyle): void {
   ReelCounter?.setStyle?.(style);
+}
+
+/** And how big it floats. Same reason it cannot just read the profile. */
+export function setCounterSize(size: CounterSize): void {
+  ReelCounter?.setSize?.(size);
 }
 
 /**

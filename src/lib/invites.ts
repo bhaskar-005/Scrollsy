@@ -1,5 +1,7 @@
 import 'expo-sqlite/localStorage/install';
 
+import * as Application from 'expo-application';
+
 import { ApiError, api, apiConfigured, isSignedIn } from '@/lib/api';
 
 /**
@@ -12,12 +14,15 @@ const CodePattern = /^[0-9a-f]{12}$/;
 
 const Key = 'invite.pending';
 
+/** Set once the Play referrer has been read, so it is never asked for twice. */
+const ClaimedKey = 'invite.referrerClaimed';
+
 /**
  * Where an invite link points. The website in /web serves it, works out
  * whether the phone has the app, and sends it either into the app or to the
  * Play listing carrying the code.
  */
-const siteUrl = process.env.EXPO_PUBLIC_SITE_URL ?? 'https://scrollsy.app';
+const siteUrl = process.env.EXPO_PUBLIC_SITE_URL ?? 'https://scrollsy.pages.dev';
 
 /**
  * A live invite link for the person signed in. The server reuses one code
@@ -67,5 +72,44 @@ export async function acceptPendingInvite(): Promise<void> {
     if (!worthRetrying) {
       localStorage.removeItem(Key);
     }
+  }
+}
+
+/**
+ * The invite of someone who had no app to open.
+ *
+ * Tapping an invite without Scrollsy installed goes to Play rather than into
+ * the app, so the code cannot arrive as a link. It rides along as the install
+ * referrer instead, which the website puts there, and Play hands it back the
+ * first time the app runs. Without this the invite is lost at exactly the
+ * moment it worked, and the person who installed lands in nobody's battle.
+ *
+ * Asked once and never again, because the answer cannot change and reaching
+ * Play's service is a real call. A code already waiting wins: it came from a
+ * link opened just now, which is fresher than how this phone was installed.
+ */
+export async function claimInstallReferrer(): Promise<void> {
+  if (localStorage.getItem(ClaimedKey) === 'true' || pendingInvite()) {
+    return;
+  }
+
+  let referrer = '';
+  try {
+    referrer = await Application.getInstallReferrerAsync();
+  } catch {
+    /**
+     * Sideloaded, a development build, or Play had nothing to say. None of
+     * those can start working later, so the question is closed either way.
+     */
+    localStorage.setItem(ClaimedKey, 'true');
+    return;
+  }
+
+  localStorage.setItem(ClaimedKey, 'true');
+
+  /** `invite=<code>` among whatever else Play tacked on, so it is parsed, not matched. */
+  const code = new URLSearchParams(referrer).get('invite');
+  if (code) {
+    savePendingInvite(code);
   }
 }
