@@ -277,11 +277,6 @@ export default function SettingsScreen() {
               label={t('settings.rows.restore')}
               value={restoring ? t('paywall.purchasing') : undefined}
               onPress={() => void bringBackPlan()}
-            />
-            <SettingsRow
-              icon="rotate-ccw"
-              label={t('settings.rows.replayOnboarding')}
-              onPress={() => router.push('/onboarding/welcome')}
               last
             />
           </SettingsGroup>

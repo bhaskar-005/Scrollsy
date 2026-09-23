@@ -81,7 +81,8 @@ export default function PaywallModal() {
     }
   };
 
-  const price = selected?.entry?.price ?? selected?.price ?? Pricing.entry;
+  const price =
+    selected?.entry?.price ?? selected?.price ?? (plan === 'yearly' ? Pricing.entry : Pricing.monthly);
 
   return (
     <Backdrop>

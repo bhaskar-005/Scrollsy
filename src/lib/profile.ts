@@ -112,6 +112,21 @@ function writeProfile(profile: Profile) {
   notify();
 }
 
+/**
+ * Fills the name, email and photo from Google's own answer at sign in, so
+ * Settings shows who is signed in right away instead of waiting on `/me`.
+ * Only fills what is empty. The server's copy replaces it on the next read.
+ */
+export function seedProfile(identity: Pick<Profile, 'name' | 'email' | 'avatarUrl'>): void {
+  const current = readProfile();
+  writeProfile({
+    ...current,
+    name: current.name || identity.name,
+    email: current.email ?? identity.email,
+    avatarUrl: current.avatarUrl ?? identity.avatarUrl,
+  });
+}
+
 /** Forgets the account on sign out, so the next person sees none of it. */
 export function clearProfile(): void {
   localStorage.removeItem(Keys.cache);

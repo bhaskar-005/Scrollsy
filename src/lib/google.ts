@@ -1,4 +1,5 @@
 import { apiConfigured, signInWithGoogle } from '@/lib/api';
+import { seedProfile } from '@/lib/profile';
 
 /**
  * Signing in. Google is the only way in, so this is the whole of it.
@@ -73,6 +74,8 @@ export async function signIn(): Promise<SignInResult> {
     }
 
     await signInWithGoogle(idToken);
+    const { user } = response.data;
+    seedProfile({ name: user.name ?? '', email: user.email, avatarUrl: user.photo });
     return 'signedIn';
   } catch (error) {
     const code = (error as { code?: string }).code;

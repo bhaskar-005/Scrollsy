@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Backdrop } from '@/components/backdrop';
 import { Eyebrow, GhostButton, Headline, PrimaryButton } from '@/components/ui';
 import { StepScreen } from '@/components/onboarding/step-screen';
 import { PerkList, PlanPicker, PlanTerms, type PlanId } from '@/components/plans';
@@ -13,7 +14,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n';
 import { recordStep } from '@/lib/onboarding';
 import { refreshProfile } from '@/lib/profile';
-import { buy } from '@/lib/purchases';
+import { buy, preparePurchases, recordCustomerInfo } from '@/lib/purchases';
 
 /** The last step either way. Launch goes straight to Home from here on. */
 function finish() {
@@ -21,8 +22,74 @@ function finish() {
   router.replace('/home');
 }
 
+type PurchasesUI = typeof import('react-native-purchases-ui');
+
+/**
+ * Screen 6. RevenueCat's own paywall, designed in their dashboard, so the
+ * layout, copy and the 14 day timeline change without an app release. See
+ * docs/revenuecat-paywall-brief.md.
+ *
+ * The written screen below stands in only where RevenueCat cannot run at all:
+ * no key, or a build without the native module.
+ */
 export default function OnboardingPaywallScreen() {
   useOnboardingStep('paywall');
+
+  /** Undefined while loading, null when RevenueCat cannot run in this build. */
+  const [ui, setUi] = useState<PurchasesUI | null | undefined>(undefined);
+
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      let loaded: PurchasesUI | null = null;
+      if (await preparePurchases()) {
+        try {
+          loaded = await import('react-native-purchases-ui');
+        } catch {
+          loaded = null;
+        }
+      }
+      if (live) {
+        setUi(loaded);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (ui === undefined) {
+    /** A beat at most. The SDK is usually configured at launch already. */
+    return <Backdrop>{null}</Backdrop>;
+  }
+  if (ui === null) {
+    return <WrittenPaywall />;
+  }
+
+  const Paywall = ui.default.Paywall;
+  return (
+    <View style={layout.store}>
+      <Paywall
+        onPurchaseCompleted={({ customerInfo }) => {
+          recordCustomerInfo(customerInfo);
+          void refreshProfile(true);
+          finish();
+        }}
+        onRestoreCompleted={({ customerInfo }) => {
+          if (recordCustomerInfo(customerInfo)) {
+            void refreshProfile(true);
+            finish();
+          }
+        }}
+        /** The paywall's own close button is its "Continue free". */
+        onDismiss={finish}
+      />
+    </View>
+  );
+}
+
+/** The app's own paywall, for a build where RevenueCat's cannot be drawn. */
+function WrittenPaywall() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
@@ -34,7 +101,8 @@ export default function OnboardingPaywallScreen() {
 
 
   const selected = offers.find((offer) => offer.plan === plan) ?? null;
-  const price = selected?.entry?.price ?? selected?.price ?? Pricing.entry;
+  const price =
+    selected?.entry?.price ?? selected?.price ?? (plan === 'yearly' ? Pricing.entry : Pricing.monthly);
 
   /**
    * Buying ends onboarding the same way declining does. Nobody is held on this
@@ -84,6 +152,13 @@ export default function OnboardingPaywallScreen() {
     </StepScreen>
   );
 }
+
+/** RevenueCat's view draws its own background and safe areas. It only needs the room. */
+const layout = StyleSheet.create({
+  store: {
+    flex: 1,
+  },
+});
 
 const makeStyles = (c: Palette) =>
   StyleSheet.create({

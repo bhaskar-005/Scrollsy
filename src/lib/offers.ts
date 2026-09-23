@@ -26,8 +26,8 @@ const MinimumSaving = 5;
  * whole percent. Null when there is nothing honest to boast about.
  *
  * Worked out from the store's own numbers rather than written down, because
- * the gap is not the same in every country. At ₹49 and ₹499 it is fifteen
- * percent. At five dollars and ten it is eighty three.
+ * the gap is not the same in every country. At ₹199 and ₹499 it is seventy
+ * nine percent. At five dollars and twenty it is sixty seven.
  */
 export function yearlySaving(offers: Offer[]): number | null {
   const monthly = offers.find((offer) => offer.plan === 'monthly')?.amountMicros ?? 0;

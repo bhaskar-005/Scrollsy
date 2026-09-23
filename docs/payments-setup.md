@@ -9,39 +9,55 @@ The page in the app already exists twice: as step 6 of onboarding
 (`src/app/paywall.tsx`). Both read prices from the store, so nothing below
 needs a code change unless a value in the "must match" column changes.
 
-**Decided: these screens ship, not RevenueCat's own paywall.**
-`react-native-purchases-ui` would let the layout be edited in their dashboard
-without an app release, which is worth revisiting if paywall copy ever needs
-testing weekly. It was not chosen now because the mascot screen is the pitch,
-and it would not save a screen or a tap: Google draws its payment sheet over
-whichever paywall is showing, so nobody is sent to another page either way.
+**Decided: onboarding uses RevenueCat's own paywall** (Paywalls v2, from
+`react-native-purchases-ui`). The layout, copy and the 14 day timeline are
+edited in their dashboard without an app release, and every price on it is a
+product variable, so it always shows what the store will charge. How to build
+it is in `docs/revenuecat-paywall-brief.md`.
+
+The app's own screen stays as the fallback, for a build where RevenueCat's
+view cannot be drawn: no SDK key, or no native module. The modal every Pro row
+opens (`src/app/paywall.tsx`) is still the app's own screen.
+
+Adding `react-native-purchases-ui` adds native code, so it needs a **new
+development build** (`npx expo run:android` or EAS). An older build will not
+have the paywall view.
 
 ## The prices
 
-| | India | United States |
+| | India | United States and the West |
 | --- | --- | --- |
-| Monthly | ₹49 | $5 |
-| Yearly | ₹499 | $10 |
-| First 7 days, new subscribers | ₹1 (see below) | $1 |
-| Yearly saving the app will show | 15% | 83% |
+| Monthly | ₹199 a month | $5 a month |
+| Yearly | ₹499 a year | $19.99 a year |
+| First 14 days, yearly only, new subscribers | ₹1 (see below) | $1 |
+| Yearly saving the app will show | 79% | 67% |
+
+How the yearly plan runs:
+
+1. Day 1. They pay **$1** (India **₹1**) for the first 14 days.
+2. Day 15. Play charges **$19.99** (India **₹499**), and again every year on
+   the same date, until they cancel. UPI AutoPay or card, whatever is on their
+   Play account.
+3. Each charge reaches the Worker through the RevenueCat webhook, which writes
+   `subscription_expires_at` in `profiles`. During the 14 days the row says
+   `trialing` and expires on day 15. After the first yearly charge it says
+   `active` and expires a year out. Each renewal pushes it another year.
+
+Monthly has no intro offer. It is $5 (India ₹199) from day 1, every month.
 
 The saving is worked out from the store's own prices, `yearlySaving` in
 `src/lib/offers.ts`, so it is right in each country without anyone typing it.
 
-**Decide this first.** Play sets a minimum price per country and India's is
-about ₹10. Type ₹1 into the offer and Play Console will very likely refuse it.
-The two honest ways out:
+**Check this first.** Play sets a minimum price per country and India's is
+about ₹10. Type ₹1 into the offer and Play Console may refuse it. If it does,
+the two honest ways out are:
 
-- **₹10 for the first week.** Same shape as the US offer, still a strong hook.
-- **A 7 day free trial** in India only. Free trials have no floor.
+- **₹10 for the first 14 days.** Same shape as the US offer.
+- **A 14 day free trial** in India only. Free trials have no floor.
 
 The app handles either without a change: it shows whatever introductory
 price the store returns, or the full price when there is none. Only the
 fallback in `src/constants/placeholder.ts` would need the new number.
-
-Also worth a second look: at $10 a year against $5 a month, nearly everyone
-in the US will take yearly. That may be what you want. In India the gap is
-much smaller.
 
 ## 1. Play Console
 
@@ -59,21 +75,23 @@ much smaller.
    - Base plan ID **`monthly`**
    - Auto-renewing, billing period 1 month
    - Prices: set United States to **$5.00** and let Play convert the rest, then
-     override India to **₹49**
+     override India to **₹199**
    - Activate
 6. Add a second base plan.
    - Base plan ID **`yearly`**
    - Auto-renewing, billing period 1 year
-   - United States **$10.00**, India **₹499**
+   - United States **$19.99** and let Play convert the rest, then override
+     India to **₹499**
    - Activate
-7. On the `monthly` base plan, add an offer.
-   - Offer ID `intro-week`
+7. On the `yearly` base plan, add an offer.
+   - Offer ID `intro-14-days`
    - Eligibility: **New customer acquisition**, customers who have never had
      this subscription
-   - Phase: **Single payment**, duration **1 week**
-   - Price: United States **$1.00**, India your decision from above
+   - Phase: **Single payment**, duration **2 weeks** (14 days)
+   - Price: United States **$1.00** and let Play convert the rest, India
+     **₹1** (see the floor warning above)
    - Activate
-8. Repeat step 7 on the `yearly` base plan, same offer ID, same phase.
+8. Do **not** add an offer to `monthly`. It is full price from day 1.
 9. Setup, License testing: add every Google account you will test with.
    Those accounts are never charged. They see Google's test instruments
    instead of UPI or real cards, which is expected.
@@ -185,9 +203,11 @@ before any release.
 
 | Who | Button | Terms line |
 | --- | --- | --- |
-| New in India | Start for ₹1 (or ₹10) | ₹1 for 7 days, then ₹499 a year |
-| New in the US | Start for $1 | $1 for 7 days, then $10 a year |
-| Had the plan before | Start for ₹499 | ₹499 a year |
+| New in India, yearly | Start for ₹1 | ₹1 for 14 days, then ₹499 a year |
+| New in the US, yearly | Start for $1 | $1 for 14 days, then $19.99 a year |
+| Monthly, India | Start for ₹199 | ₹199 a month |
+| Monthly, US | Start for $5 | $5 a month |
+| Had the plan before, yearly | Start for ₹499 or $19.99 | ₹499 or $19.99 a year |
 | Store not reached yet | Written price from `placeholder.ts` | Same, written |
 
 A returning subscriber is not eligible for the offer, so Play leaves it out

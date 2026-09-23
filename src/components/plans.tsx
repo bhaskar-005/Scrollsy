@@ -91,7 +91,12 @@ export function PlanTerms({ offer }: { offer: Offer | null }) {
 
   const plan = offer?.plan ?? 'yearly';
   const price = offer?.price ?? Written[plan];
-  const entry = offer ? offer.entry : { price: Pricing.entry, days: Pricing.entryDays };
+  /** Only yearly carries the first 14 days offer. */
+  const entry = offer
+    ? offer.entry
+    : plan === 'yearly'
+      ? { price: Pricing.entry, days: Pricing.entryDays }
+      : null;
 
   return (
     <Text style={styles.terms}>

@@ -36,7 +36,7 @@ listed below so they are not lost.
 - [ ] Google Cloud OAuth clients, one Web and one Android with the signing key's SHA-1. The Web client id goes in two places, both ours: `.env` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` and the Worker secret `GOOGLE_CLIENT_ID`. Supabase Auth is not involved and its Google provider can stay switched off, since the Worker verifies Google's token itself
 - [ ] RevenueCat project, Play products, an entitlement named `pro`, webhook pointed at `<worker>/v1/webhooks/revenuecat` with the Authorization value you set above
 - [x] Real Terms and Privacy pages, served by `web/` at `/terms` and `/privacy`, with `src/constants/legal.ts` pointing at them through `EXPO_PUBLIC_SITE_URL`. The privacy page names the Accessibility Service and what it is for, which Play requires. Both are written from what the code actually does and still want a read by someone who knows the law where you are selling
-- [ ] Dollar prices for the monthly and yearly plans. The entry offer is settled, one rupee in India and one dollar elsewhere, but `Pricing.monthly` and `Pricing.yearly` are still rupees only
+- [x] Prices settled. Monthly $5 (₹199), yearly $19.99 (₹499), and $1 (₹1) for the first 14 days on yearly only. See docs/payments-setup.md
 - [ ] Check Play allows a one rupee introductory price in India. Play sets a minimum price per country and it may be above that
 - [ ] A domain for the website, if the `workers.dev` address should not be the invite link. It goes in `.env.local` as `EXPO_PUBLIC_SITE_URL`, which is what the share sheet hands out
 - [ ] The app's signing key SHA-256 fingerprints in `web/wrangler.jsonc`, plus the matching `intentFilters` in `app.json`, to make invite links open the app directly

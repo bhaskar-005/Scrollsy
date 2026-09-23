@@ -41,10 +41,14 @@ export const MascotArt: Record<MascotState, number> = {
    */
   fresh: require('@/assets/animate/fresh.webp'),
   buzzed: require('@/assets/animate/buzzed.webp'),
-  dizzy: require('@/assets/mascot/dizzy.png'),
-  fried: require('@/assets/mascot/fried.png'),
-  cooked: require('@/assets/mascot/cooked.png'),
-  gone: require('@/assets/mascot/gone.png'),
+  /** His spirals turning, rather than a blink. Twelve frames to a full turn. */
+  dizzy: require('@/assets/animate/dizzy.webp'),
+  /** His X eyes spinning, knocked out. A full turn every 3.6 seconds. */
+  fried: require('@/assets/animate/fried.webp'),
+  /** Eyes spinning, the spiral over him turning the other way, the stars pulsing. */
+  cooked: require('@/assets/animate/cooked.webp'),
+  /** His battery dying. A glow, a few flickers, then dead for a couple of seconds. */
+  gone: require('@/assets/animate/gone.webp'),
 };
 
 /** Mascot art is a 512 square, keep him in proportion at any width. */

@@ -93,7 +93,12 @@ export function entitlementState(
     return { status: 'expired', ...base };
   }
 
-  if (subscription?.period_type === 'trial') {
+  /**
+   * The paid first week is an intro phase, not a free trial, but it is the
+   * same thing to us: the week before the first yearly charge. The renewal
+   * that ends it comes back as `normal`, with the expiry a year out.
+   */
+  if (subscription?.period_type === 'trial' || subscription?.period_type === 'intro') {
     return { status: 'trialing', ...base };
   }
 

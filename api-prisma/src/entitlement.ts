@@ -93,7 +93,8 @@ export function entitlementState(
     return { status: 'expired', ...base };
   }
 
-  if (subscription?.period_type === 'trial') {
+  /** The paid first week counts as the trial, same as in api/. */
+  if (subscription?.period_type === 'trial' || subscription?.period_type === 'intro') {
     return { status: 'trialing', ...base };
   }
 

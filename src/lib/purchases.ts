@@ -7,7 +7,9 @@ import { toMicros, type Offer, type Plan } from '@/lib/offers';
 export { entryPrice, yearlySaving, type Offer, type Plan } from '@/lib/offers';
 
 /**
- * Buying the plan. The only file that knows RevenueCat exists.
+ * Buying the plan. The only file that talks to the RevenueCat SDK. The one
+ * exception is the onboarding paywall, which draws RevenueCat's own paywall
+ * view and hands what it returns back here.
  *
  * RevenueCat does not take the payment. Google Play does, with whatever the
  * person has on their Play account, which in India includes UPI and UPI
@@ -216,6 +218,24 @@ export async function loadOffers(): Promise<Offer[]> {
     if (__DEV__) console.log('offers failed:', error);
     return [];
   }
+}
+
+/**
+ * Configures the SDK before a screen draws RevenueCat's own paywall, which
+ * needs it configured first. False when it cannot run here: no key, or no
+ * native module in this build.
+ */
+export async function preparePurchases(): Promise<boolean> {
+  return (await purchases()) !== null;
+}
+
+/**
+ * Records what RevenueCat's paywall handed back after a purchase or restore,
+ * the same way `buy` does. True when that makes them a member.
+ */
+export function recordCustomerInfo(info: CustomerInfo): boolean {
+  readEntitlement(info);
+  return isEntitled();
 }
 
 /** Opens Google's own purchase sheet for one plan, and records what comes back. */

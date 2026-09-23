@@ -24,6 +24,9 @@ export const Languages = [{ id: 'en', label: 'English' }] as const;
 /**
  * What a price row says before the store has ever answered on this device.
  *
+ * The entry offer is on the yearly plan only. `entryDays` for `entry`, then
+ * `yearly` once a year. Monthly is its full price from the first day.
+ *
  * The real price always comes from the store, through RevenueCat, formatted in
  * the buyer's own currency. These only fill the gap on a first launch with no
  * connection, and they match what is configured in Play Console, so the gap
@@ -41,13 +44,13 @@ export const Pricing = inRupees
        * Play Console accepts this before launch. See docs/payments-setup.md.
        */
       entry: '₹1',
-      entryDays: 7,
-      monthly: '₹49',
+      entryDays: 14,
+      monthly: '₹199',
       yearly: '₹499',
     }
   : {
       entry: '$1',
-      entryDays: 7,
+      entryDays: 14,
       monthly: '$5',
-      yearly: '$10',
+      yearly: '$19.99',
     };

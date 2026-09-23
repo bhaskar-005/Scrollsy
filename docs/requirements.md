@@ -167,7 +167,7 @@ Both the onboarding step and the modal. The modal opens from every locked row.
 
 - [x] Mascot, headline `Buy back your brain.` (modal) or `Bring him home.` (onboarding)
 - [x] Benefit list. Lock apps at your limit, 6 counter styles, full history and unlimited friends, buy back reels after lockout
-- [x] Monthly `$4` shown first, yearly `$19` with `save 60%`
+- [x] Monthly `$5` and yearly `$19.99` with the store worked saving, yearly selected
 - [x] Primary CTA `Start 7 days free`
 - [x] Secondary `Continue free`
 - [ ] Price and renewal terms stated plainly on the screen
@@ -225,7 +225,7 @@ Draws over other apps while you scroll.
 - [ ] Buy 50 more reels after lockout
 - [ ] Full history beyond 7 days
 - [ ] More than 5 friends
-- [ ] Plans, monthly $4 and yearly $19 (save 60%), 7 day trial
+- [ ] Plans, monthly $5 (₹199) and yearly $19.99 (₹499), $1 (₹1) for the first 14 days on yearly
 - [ ] Paywall modal reachable from every locked row
 
 Free shows the problem, paid fixes it. The free tier never fully solves the problem.

@@ -50,6 +50,18 @@ test('a free trial is trialing', () => {
   assert.deepEqual(state.status, 'trialing');
 });
 
+test('the paid first week is trialing', () => {
+  const state = entitlementState(subscriber({ expires_date: future }, { period_type: 'intro' }), 'pro', now);
+  assert.deepEqual(state.status, 'trialing');
+});
+
+test('the yearly renewal after the first week is active until a year out', () => {
+  const nextYear = '2027-09-22T12:00:00Z';
+  const state = entitlementState(subscriber({ expires_date: nextYear }), 'pro', now);
+  assert.deepEqual(state.status, 'active');
+  assert.deepEqual(state.expiresAt, new Date(nextYear).toISOString());
+});
+
 test('cancelled but still paid up is canceled, not expired', () => {
   const state = entitlementState(
     subscriber({ expires_date: future }, { unsubscribe_detected_at: past }),

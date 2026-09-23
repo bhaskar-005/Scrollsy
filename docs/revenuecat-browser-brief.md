@@ -44,18 +44,19 @@ This is a live billing dashboard for a real app. Read the rules before clicking.
 
 ## The plan and its prices
 
-Two plans, sold in every country, with an introductory price for the first
-week for people who have never subscribed before.
+Two plans, sold in every country. The yearly plan has an introductory price
+for the first 14 days, for people who have never subscribed before. Monthly
+has no intro offer. To change prices later, use `docs/pricing-browser-brief.md`.
 
 | | India | United States |
 | --- | --- | --- |
-| Monthly | ₹49 | $5 |
-| Yearly | ₹499 | $10 |
-| First 7 days | ₹1, see the warning | $1 |
+| Monthly | ₹199 | $5 |
+| Yearly | ₹499 | $19.99 |
+| First 14 days, yearly only | ₹1, see the warning | $1 |
 
 **Warning about ₹1.** Google Play enforces a minimum price per country and
 India's is roughly ₹10. If any field refuses ₹1, **stop and ask the user**
-whether to use ₹10 for the first week or a 7 day free trial instead. Do not
+whether to use ₹10 for the first 14 days or a 14 day free trial instead. Do not
 pick one yourself, and do not round the price silently.
 
 Prices are set in Play Console, not in RevenueCat. They appear here read only,
@@ -206,7 +207,7 @@ If they do, these are the app's own values, so the two look like one product.
   - `Full history, not just 7 days`
   - `More than 5 friends`
 - Terms, shown plainly and never hidden:
-  `{entry} for 7 days, then {price} a year. Cancel anytime in Play Store.`
+  `{entry} for 14 days, then {price} a year. Cancel anytime in Play Store.`
 
 **Writing rules for anything you type into a paywall.** No em dashes or en
 dashes. No colons except in a clock time. Sentence case. Short lines. The price
